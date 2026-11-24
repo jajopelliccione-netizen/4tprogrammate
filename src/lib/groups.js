@@ -5,10 +5,13 @@ export const ABSENT = 'assente';
 export const SEATS = 4;
 export const MAX_SEATS = 5;
 
-export const groupId = (n) => `g${String(n).padStart(2, '0')}`;
-export const groupNumber = (id) => Number(String(id).replace(/^g/, '')) || 0;
+// pid = id della programmata (materia). Senza pid: gruppi "vecchi", id g01, g02…
+export const groupId = (n, pid = '') => `${pid ? `${pid}_` : ''}g${String(n).padStart(2, '0')}`;
+export const groupNumber = (id) => Number((String(id).match(/(\d+)$/) || [])[1]) || 0;
+export const pidOf = (g) => g.pid || '';
 
 export const emptyGroup = (number, extra = {}) => ({
+  pid: '',
   number,
   date: null,
   startsAt: null,
@@ -142,22 +145,30 @@ export function moveStudent(groups, sid, target) {
 }
 
 // Distribuzione automatica: riempie i gruppi 1..n con 4 studenti ciascuno, in ordine.
-// Mantiene le date dei gruppi già esistenti.
-export function distribute(studentIds, numGroups, existing) {
+// Se gli studenti avanzano (fino a 1 per gruppo) il 5° posto va agli ULTIMI gruppi:
+// es. 17 studenti in 4 gruppi → 4, 4, 4, 5. Mantiene le date dei gruppi già esistenti.
+export function distribute(studentIds, numGroups, existing, pid = '') {
   const byNumber = new Map(existing.map((g) => [g.number, g]));
   const groups = {};
+  const extra = studentIds.length - numGroups * SEATS;
+  const bonus = extra > 0 ? Math.min(extra, numGroups) : 0;
+  let idx = 0;
   for (let n = 1; n <= numGroups; n++) {
+    const size = SEATS + (n > numGroups - bonus ? 1 : 0);
     const old = byNumber.get(n);
-    const seats = studentIds.slice((n - 1) * SEATS, n * SEATS);
+    const seats = studentIds.slice(idx, idx + size);
+    idx += size;
     while (seats.length < SEATS) seats.push('');
-    groups[groupId(n)] = emptyGroup(n, {
+    groups[groupId(n, pid)] = emptyGroup(n, {
+      pid,
       date: old?.date ?? null,
       startsAt: old?.startsAt ?? null,
       seats,
+      status: seats.map(() => WAIT),
     });
   }
   const deleted = existing.filter((g) => g.number > numGroups).map((g) => g.id);
-  const overflow = Math.max(0, studentIds.length - numGroups * SEATS);
+  const overflow = Math.max(0, studentIds.length - idx);
   return { groups, deleted, overflow };
 }
 

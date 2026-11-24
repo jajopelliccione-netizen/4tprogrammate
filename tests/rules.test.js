@@ -349,9 +349,22 @@ test('gruppo da 5 persone: scambio sul 5° posto riuscito, e 5° posto non manom
   await assertSucceeds(b2.commit());
 });
 
-test('config (materia): la legge chi ha un account, la scrive solo l\'admin', async () => {
-  await assertSucceeds(setDoc(doc(as(ADMIN), 'config', 'main'), { subject: 'Italiano' }));
-  await assertSucceeds(getDoc(doc(as(UA), 'config', 'main')));
-  await assertFails(setDoc(doc(as(UA), 'config', 'main'), { subject: 'Altro' }));
-  await assertFails(getDoc(doc(as(UX), 'config', 'main')));
+test('programmate (materie): le legge chi ha un account, le gestisce solo l\'admin', async () => {
+  await assertSucceeds(setDoc(doc(as(ADMIN), 'programmate', 'p1'), { subject: 'Italiano', order: 1 }));
+  await assertSucceeds(getDoc(doc(as(UA), 'programmate', 'p1')));
+  await assertFails(setDoc(doc(as(UA), 'programmate', 'p2'), { subject: 'Altro', order: 2 }));
+  await assertFails(getDoc(doc(as(UX), 'programmate', 'p1')));
+});
+
+test('non si scambia tra programmate (materie) diverse', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const adb = ctx.firestore();
+    await updateDoc(doc(adb, 'groups', 'g01'), { pid: 'p1' });
+    await updateDoc(doc(adb, 'groups', 'g02'), { pid: 'p2' });
+  });
+  await assertFails(setDoc(doc(as(UA), 'swaps', 'sx'), swapData()));
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await updateDoc(doc(ctx.firestore(), 'groups', 'g02'), { pid: 'p1' });
+  });
+  await assertSucceeds(setDoc(doc(as(UA), 'swaps', 'sy'), swapData()));
 });

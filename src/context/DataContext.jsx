@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { useToday } from '../hooks';
-import { findSeat, sortGroups } from '../lib/groups';
+import { findSeat, groupNumber, pidOf, sortGroups } from '../lib/groups';
 import { setSwapStatus, swapValidNow } from '../lib/swaps';
 
 const Ctx = createContext(null);
@@ -19,7 +19,8 @@ export function DataProvider({ children }) {
   const [students, setStudents] = useState([]);
   const [groupsRaw, setGroups] = useState(null);
   const [history, setHistory] = useState([]);
-  const [subject, setSubject] = useState('');
+  const [programmateRaw, setProgrammate] = useState(null);
+  const [pidSel, setPidSel] = useState(() => { try { return sessionStorage.getItem('pid'); } catch { return null; } });
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
 
@@ -27,7 +28,7 @@ export function DataProvider({ children }) {
     const err = (e) => console.error(e);
     const subs = [
       onSnapshot(collection(db, 'students'), (s) => setStudents(s.docs.map(withId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))), err),
-      onSnapshot(doc(db, 'config', 'main'), (s) => setSubject(s.exists() ? s.data().subject || '' : ''), err),
+      onSnapshot(collection(db, 'programmate'), (s) => setProgrammate(s.docs.map(withId)), err),
       onSnapshot(collection(db, 'groups'), (s) => setGroups(s.docs.map(withId)), err),
       onSnapshot(query(collection(db, 'history'), orderBy('at', 'desc'), limit(300)), (s) => setHistory(s.docs.map(withId)), err),
     ];
@@ -40,13 +41,39 @@ export function DataProvider({ children }) {
     return () => subs.forEach((u) => u());
   }, [user.uid, isAdmin]);
 
-  const groups = useMemo(() => sortGroups(groupsRaw || []), [groupsRaw]);
-  const groupsById = useMemo(() => Object.fromEntries(groups.map((g) => [g.id, g])), [groups]);
+  const allGroups = useMemo(() => sortGroups(groupsRaw || []), [groupsRaw]);
+  const groupsById = useMemo(() => Object.fromEntries(allGroups.map((g) => [g.id, g])), [allGroups]);
   const studentsById = useMemo(() => Object.fromEntries(students.map((s) => [s.id, s])), [students]);
   const nameOf = (sid) => studentsById[sid]?.name || '(?)';
 
   const mySid = profile?.role === 'student' ? profile.studentId : null;
+
+  // Programmate (una per materia). I gruppi "vecchi" senza pid finiscono in una voce "Senza materia".
+  const programmate = useMemo(() => {
+    const list = [...(programmateRaw || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (allGroups.some((g) => !g.pid)) list.push({ id: '', subject: 'Senza materia', virtual: true });
+    return list;
+  }, [programmateRaw, allGroups]);
+
+  // Programmata selezionata: l'ultima scelta, altrimenti la prima in cui sono inserito, altrimenti la prima.
+  const currentPid = useMemo(() => {
+    if (programmate.some((p) => p.id === pidSel)) return pidSel;
+    const mine = mySid && programmate.find((p) => allGroups.some((g) => pidOf(g) === p.id && g.seats.includes(mySid)));
+    return (mine || programmate[0])?.id ?? '';
+  }, [programmate, pidSel, allGroups, mySid]);
+  const setPid = (id) => {
+    setPidSel(id);
+    try { sessionStorage.setItem('pid', id); } catch { /* niente */ }
+  };
+  const currentProg = programmate.find((p) => p.id === currentPid) || null;
+  const groups = useMemo(() => allGroups.filter((g) => pidOf(g) === currentPid), [allGroups, currentPid]);
   const mySeat = useMemo(() => (mySid ? findSeat(groups, mySid) : null), [groups, mySid]);
+
+  const groupLabel = (id) => `Gruppo ${groupsById[id]?.number ?? groupNumber(id)}`;
+  const subjectOf = (id) => {
+    const g = groupsById[id];
+    return g ? programmate.find((p) => p.id === pidOf(g))?.subject || '' : '';
+  };
 
   // Una richiesta in attesa è "valida" solo se i due posti sono ancora quelli e il giorno non è iniziato.
   const isLive = (sw) => sw.status === 'pending' && swapValidNow(sw, groupsById, today);
@@ -65,7 +92,8 @@ export function DataProvider({ children }) {
   }, [incoming, outgoing, groupsById, groupsRaw, today]);
 
   const value = {
-    today, subject, students, studentsById, nameOf, groups, groupsById, groupsLoaded: groupsRaw !== null, history,
+    today, subject: currentProg?.subject || '', programmate, currentPid, currentProg, setPid, allGroups, groupLabel, subjectOf,
+    students, studentsById, nameOf, groups, groupsById, groupsLoaded: groupsRaw !== null && programmateRaw !== null, history,
     mySid, mySeat, incoming, outgoing, isLive, badge: pendingIncoming.length,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

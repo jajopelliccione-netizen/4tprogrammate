@@ -98,3 +98,12 @@ button.seat-in { cursor: pointer; } button.seat-in:active { background: #0001; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 .titolo { margin: 2px 0 10px; } .titolo small { font-weight: 400; }
+
+.progbar { margin: 0 0 10px; } .progtabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.progtabs button { flex: none; border-radius: 99px; min-height: 38px; padding: 6px 16px; }
+.progtabs button.on { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; } .progtabs button.plus { border-style: dashed; color: var(--brand); }
+details.sec { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin: 10px 0; padding: 0 12px; }
+details.sec > summary { cursor: pointer; padding: 12px 0; font-weight: 700; list-style: none; } details.sec > summary::-webkit-details-marker { display: none; }
+details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 8px; } details.sec > :not(summary) { margin-bottom: 12px; }
+.boardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.gcard .addseat { margin-left: auto; }

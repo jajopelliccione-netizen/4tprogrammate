@@ -5,11 +5,11 @@ import {
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/Toast';
 import {
-  addGroup, commitChange, deleteGroup, setGroupDate, setGroupDates, setGroupSub, setSubject,
+  addGroup, commitChange, deleteGroup, deleteProgrammata, renameProgrammata, setGroupDate, setGroupDates, setGroupSub,
 } from '../../lib/admin';
 import { buildImport, parseGroupsText } from '../../lib/importGroups';
 import { colorOf } from '../../components/GroupCard';
-import { MAX_SEATS, SEATS, WAIT, distribute, finalize, findSeat, moveStudent, shuffled, subOf } from '../../lib/groups';
+import { MAX_SEATS, SEATS, WAIT, distribute, finalize, moveStudent, shuffled, subOf } from '../../lib/groups';
 import { addDays } from '../../lib/dates';
 import { errMsg } from '../../hooks';
 
@@ -32,16 +32,18 @@ function Slot({ id, onTap, children, className = '' }) {
 }
 
 export default function Gruppi() {
-  const { groups, groupsById, students, studentsById, nameOf, subject } = useData();
+  const {
+    groups, groupsById, students, studentsById, nameOf, currentPid, currentProg, programmate, setPid,
+  } = useData();
   const toast = useToast();
   const [picked, setPicked] = useState(null);
   const [active, setActive] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [nGroups, setNGroups] = useState(Math.max(1, Math.ceil(students.filter((s) => !s.excluded).length / SEATS)));
+  const [nGroups, setNGroups] = useState(Math.max(1, Math.floor(students.filter((s) => !s.excluded).length / SEATS)));
   const [shuffle, setShuffle] = useState(false);
   const [start, setStart] = useState('');
   const [step, setStep] = useState(7);
-  const [subj, setSubj] = useState(subject || '');
+  const [subj, setSubj] = useState('');
   const [importText, setImportText] = useState('');
 
   const sensors = useSensors(
@@ -53,17 +55,20 @@ export default function Gruppi() {
     setBusy(true);
     try { await fn(); } catch (e) { toast(errMsg(e), { error: true }); } finally { setBusy(false); }
   };
+  const commit = (args) => commitChange({ groupsById, studentsById, pid: currentPid, ...args });
 
+  if (!currentProg) {
+    return <p className="muted">Crea prima una programmata (materia) con il pulsante <b>+ Nuova</b> qui sopra.</p>;
+  }
+
+  // chi è in un posto di QUESTA programmata
   const seated = new Set(groups.flatMap((g) => g.seats.filter(Boolean)));
   const pool = students.filter((s) => !seated.has(s.id));
 
   function move(sid, target) {
     const changed = moveStudent(groups, sid, target);
     if (!Object.keys(changed).length) return;
-    run(() => commitChange({
-      changed, groupsById, studentsById,
-      entry: { type: 'sposta', sid, to: target.pool ? null : target.gid },
-    }));
+    run(() => commit({ changed, entry: { type: 'sposta', sid, to: target.pool ? null : target.gid } }));
   }
 
   function onDragEnd({ active: a, over }) {
@@ -84,79 +89,88 @@ export default function Gruppi() {
   const toggleExcluded = (s) => run(async () => {
     if (!s.excluded) {
       const changed = moveStudent(groups, s.id, { pool: true });
-      await commitChange({ changed, studentPatches: { [s.id]: { excluded: true } }, groupsById, studentsById,
-        entry: { type: 'escluso', sid: s.id } });
+      await commit({ changed, studentPatches: { [s.id]: { excluded: true } }, entry: { type: 'escluso', sid: s.id } });
       toast(`${s.name} escluso dalle programmate.`);
     } else {
-      // reinserito: va nel primo posto libero (se c'è)
       let changed = {};
       for (const g of groups) {
         const pos = g.seats.indexOf('');
         if (pos >= 0) { changed = moveStudent(groups, s.id, { gid: g.id, pos }); break; }
       }
-      await commitChange({ changed, studentPatches: { [s.id]: { excluded: false } }, groupsById, studentsById,
-        entry: { type: 'reinserito', sid: s.id } });
+      await commit({ changed, studentPatches: { [s.id]: { excluded: false } }, entry: { type: 'reinserito', sid: s.id } });
       toast(`${s.name} reinserito.`);
     }
     setPicked(null);
   });
 
+  // + posto: porta un gruppo da 4 a 5 persone (e viceversa se l'ultimo posto è libero)
+  const changeSeats = (g, add) => {
+    const d = { ...g, seats: [...g.seats], status: [...g.status] };
+    if (add) { d.seats.push(''); d.status.push(WAIT); } else { d.seats.pop(); d.status.pop(); }
+    run(() => commit({ changed: { [g.id]: finalize(d) }, entry: { type: 'posto', group: g.id, add } }));
+  };
+
   const auto = () => {
     const base = students.filter((s) => !s.excluded).map((s) => s.id);
     const ids = shuffle ? shuffled(base) : base;
-    const res = distribute(ids, Number(nGroups), groups);
-    if (!confirm(`Ridistribuire ${ids.length} studenti in ${nGroups} gruppi? I gruppi attuali (posti e stati) vengono sostituiti; le date restano. Potrai annullare.`)) return;
+    const res = distribute(ids, Number(nGroups), groups, currentPid);
+    if (!confirm(`Ridistribuire ${ids.length} studenti in ${nGroups} gruppi di "${currentProg.subject}"? I gruppi attuali di questa materia (posti e stati) vengono sostituiti; le date restano. Potrai annullare.`)) return;
     run(async () => {
-      await commitChange({ changed: res.groups, deleted: res.deleted, groupsById, studentsById,
-        entry: { type: 'distribuzione', n: Number(nGroups) } });
+      await commit({ changed: res.groups, deleted: res.deleted, entry: { type: 'distribuzione', n: Number(nGroups) } });
       toast(res.overflow ? `Distribuiti. ${res.overflow} studenti restano fuori: aumenta i gruppi.` : 'Gruppi creati ✔');
     });
   };
-
-  const applyDates = () => run(async () => {
-    const dates = groups.map((_, i) => addDays(start, i * Number(step)));
-    await setGroupDates(groups, dates);
-    toast('Date impostate.');
-  });
 
   const doImport = () => {
     const { groups: parsed, errors } = parseGroupsText(importText, students);
     if (errors.length) { toast(errors.slice(0, 3).join(' · '), { error: true }); return; }
     if (!parsed.length) { toast('Nessun gruppo trovato.', { error: true }); return; }
-    if (!confirm(`Importare ${parsed.length} gruppi? Sostituiscono quelli attuali (le date restano). Potrai annullare.`)) return;
-    const { changed, deleted } = buildImport(parsed, groups);
+    if (!confirm(`Importare ${parsed.length} gruppi in "${currentProg.subject}"? Sostituiscono quelli attuali di questa materia (le date restano). Potrai annullare.`)) return;
+    const { changed, deleted } = buildImport(parsed, groups, currentPid);
     run(async () => {
-      await commitChange({ changed, deleted, groupsById, studentsById, entry: { type: 'importa', n: parsed.length } });
+      await commit({ changed, deleted, entry: { type: 'importa', n: parsed.length } });
       toast('Gruppi importati ✔');
       setImportText('');
     });
   };
 
-  const toggleFifth = (g) => {
-    const add = g.seats.length < MAX_SEATS;
-    const doc5 = { ...g, seats: [...g.seats], status: [...g.status] };
-    if (add) { doc5.seats.push(''); doc5.status.push(WAIT); } else { doc5.seats.pop(); doc5.status.pop(); }
-    run(() => commitChange({ changed: { [g.id]: finalize(doc5) }, groupsById, studentsById,
-      entry: { type: 'posto', group: g.id, add } }));
+  const applyDates = () => run(async () => {
+    await setGroupDates(groups, groups.map((_, i) => addDays(start, i * Number(step))));
+    toast('Date impostate.');
+  });
+
+  const removeProg = () => {
+    if (!confirm(`Eliminare la programmata "${currentProg.subject}" con tutti i suoi gruppi? Non si può annullare.`)) return;
+    run(async () => {
+      await deleteProgrammata(currentPid, groups);
+      setPid('');
+      toast('Programmata eliminata.');
+    });
   };
 
   const sel = picked ? studentsById[picked] : null;
-  const subCandidates = (g) => groups.filter((x) => x.id !== g.id)
-    .flatMap((x) => x.seats.filter(Boolean).map((sid) => sid));
+  const lastNumber = groups.length ? Math.max(...groups.map((x) => x.number)) : 0;
+  const subCandidates = (g) => groups.filter((x) => x.id !== g.id).flatMap((x) => x.seats.filter(Boolean));
 
   return (
     <DndContext sensors={sensors} onDragStart={(e) => setActive(String(e.active.id).replace('stu:', ''))}
       onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
+
+      <div className="boardhead">
+        <h2 style={{ margin: 0 }}>{currentProg.subject}</h2>
+        <button className="small" disabled={busy} onClick={() => run(async () => { await addGroup(groups, currentPid); })}>+ Gruppo</button>
+      </div>
       <p className="hint">Trascina i nomi (o tocca un nome e poi un posto). Se il posto è occupato, i due si scambiano.</p>
 
       {sel && (
         <div className="pickbar">
           <b>{sel.name}</b>
-          <button disabled={busy} onClick={() => toggleExcluded(sel)}>{sel.excluded ? 'Reinserisci' : 'Escludi dalle programmate'}</button>
+          <button disabled={busy} onClick={() => toggleExcluded(sel)}>{sel.excluded ? 'Reinserisci' : 'Escludi'}</button>
           <button onClick={() => setPicked(null)}>✕</button>
         </div>
       )}
 
+      {groups.length === 0 && <p className="muted">Nessun gruppo: usa "Distribuisci automaticamente" o "Importa gruppi da testo" qui sotto.</p>}
       <div className="grid">
         {groups.map((g) => {
           const sub = subOf(groups, g);
@@ -183,13 +197,14 @@ export default function Gruppi() {
                     {subCandidates(g).map((sid) => <option key={sid} value={sid}>{nameOf(sid)}</option>)}
                   </select>
                 </label>
-                {(g.seats.length < MAX_SEATS || !g.seats[MAX_SEATS - 1]) && (
-                  <button className="small" disabled={busy} onClick={() => toggleFifth(g)}>
-                    {g.seats.length < MAX_SEATS ? '+ 5° posto' : '− togli 5° posto'}
-                  </button>
+                {g.seats.length < MAX_SEATS && (
+                  <button className="small addseat" disabled={busy} onClick={() => changeSeats(g, true)}>+ Aggiungi persona</button>
                 )}
-                {g.seats.every((s) => !s) && g.number === Math.max(...groups.map((x) => x.number)) && (
-                  <button className="danger small" onClick={() => run(() => deleteGroup(g.id))}>Elimina gruppo</button>
+                {g.seats.length >= MAX_SEATS && !g.seats[g.seats.length - 1] && (
+                  <button className="small addseat" disabled={busy} onClick={() => changeSeats(g, false)}>− Togli 5° posto</button>
+                )}
+                {g.seats.every((s) => !s) && g.number === lastNumber && (
+                  <button className="danger small" disabled={busy} onClick={() => run(() => deleteGroup(g.id))}>Elimina gruppo</button>
                 )}
               </footer>
             </section>
@@ -197,7 +212,7 @@ export default function Gruppi() {
         })}
       </div>
 
-      <h2>Fuori dai gruppi</h2>
+      <h2>Fuori da questa programmata</h2>
       <Slot id="pool" className="pool" onTap={() => tapTarget({ pool: true })}>
         {pool.length === 0 && <span className="vuoto">Nessuno</span>}
         {pool.map((s) => (
@@ -206,35 +221,46 @@ export default function Gruppi() {
       </Slot>
       {pool.some((s) => s.excluded) && <p className="hint">I nomi sbarrati sono esclusi dalle programmate.</p>}
 
-      <h2>Strumenti</h2>
-      <div className="panel flat">
-        <button disabled={busy} onClick={() => run(() => addGroup(groups))}>+ Aggiungi gruppo</button>
+      <details className="sec">
+        <summary>🎲 Distribuisci automaticamente</summary>
         <label>Numero di gruppi
           <input type="number" min="1" max="30" value={nGroups} onChange={(e) => setNGroups(e.target.value)} />
         </label>
+        <p className="hint">Gruppi da 4. Se avanzano persone, l'ultimo posto in più va agli ultimi gruppi
+          (es. 17 studenti in 4 gruppi → 4, 4, 4, 5).</p>
         <label className="inline"><input type="checkbox" checked={shuffle} onChange={(e) => setShuffle(e.target.checked)} /> Ordine casuale</label>
-        <button className="primary" disabled={busy || !students.length} onClick={auto}>🎲 Distribuisci automaticamente</button>
-      </div>
-      <div className="panel flat">
-        <h3>Materia</h3>
-        <label>Materia delle interrogazioni
-          <input value={subj} onChange={(e) => setSubj(e.target.value)} placeholder="Es. Italiano" />
-        </label>
-        <button disabled={busy} onClick={() => run(async () => { await setSubject(subj); toast('Materia salvata.'); })}>Salva materia</button>
-      </div>
-      <div className="panel flat">
-        <h3>Importa gruppi da testo</h3>
-        <p className="hint">Una riga per gruppo, cognomi separati da virgola, sostituto dopo "|". Esempio:<br />
-          <code>Gruppo 1: Tasmi, Sciumè, Perricone, Maino | Sostituto: Guzzardi</code></p>
+        <button className="primary" disabled={busy || !students.length} onClick={auto}>Distribuisci</button>
+      </details>
+
+      <details className="sec">
+        <summary>📥 Importa gruppi da testo</summary>
+        <p className="hint">Una riga per gruppo, cognomi separati da virgola, sostituto dopo "|":<br />
+          <code>Gruppo 1: Tasmi, Sciumè, Perricone, Maino | Sostituto: Guzzardi</code><br />
+          Si possono scrivere fino a 5 nomi per gruppo.</p>
         <textarea rows={7} value={importText} onChange={(e) => setImportText(e.target.value)} />
         <button className="primary" disabled={busy || !importText.trim()} onClick={doImport}>Importa i gruppi</button>
-      </div>
-      <div className="panel flat">
-        <h3>Date a cadenza</h3>
+      </details>
+
+      <details className="sec">
+        <summary>📅 Date a cadenza</summary>
         <label>Prima data<input type="date" value={start} onChange={(e) => setStart(e.target.value)} /></label>
         <label>Ogni quanti giorni<input type="number" min="1" value={step} onChange={(e) => setStep(e.target.value)} /></label>
         <button disabled={busy || !start || !groups.length} onClick={applyDates}>Imposta le date</button>
-      </div>
+      </details>
+
+      <details className="sec">
+        <summary>⚙️ Programmata: nome ed eliminazione</summary>
+        {!currentProg.virtual && (
+          <>
+            <label>Materia
+              <input value={subj || currentProg.subject} onChange={(e) => setSubj(e.target.value)} />
+            </label>
+            <button disabled={busy || !subj.trim()} onClick={() => run(async () => { await renameProgrammata(currentPid, subj); setSubj(''); toast('Nome salvato.'); })}>Salva nome</button>
+          </>
+        )}
+        <button className="danger" disabled={busy} onClick={removeProg}>Elimina questa programmata</button>
+        {programmate.length > 1 && <p className="hint">Per passare a un'altra materia usa le schede in alto.</p>}
+      </details>
 
       <DragOverlay>{active ? <div className="chip drag">{nameOf(active)}</div> : null}</DragOverlay>
     </DndContext>

@@ -5,13 +5,14 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import GroupCard from '../components/GroupCard';
 import Modal from '../components/Modal';
+import ProgrammataPicker from '../components/ProgrammataPicker';
 import { formatDate } from '../lib/dates';
 import { createSwap, seatSwappable } from '../lib/swaps';
 import { errMsg } from '../hooks';
 
 export default function Cartina() {
   const { user, isAdmin } = useAuth();
-  const { subject, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
+  const { subject, programmate, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
   const toast = useToast();
   const gridRef = useRef(null);
   const [target, setTarget] = useState(null); // { group, pos }
@@ -65,6 +66,7 @@ export default function Cartina() {
 
   return (
     <>
+      <ProgrammataPicker />
       <h2 className="titolo">Interrogazioni programmate{subject && <> · <b>{subject}</b></>} <small>· 4T SSA</small></h2>
       {mySid && (
         <div className="mybox">
@@ -82,7 +84,7 @@ export default function Cartina() {
       {mySid && mySeat && mySwappable && <p className="hint">Per chiedere uno scambio tocca il nome di un compagno (⇄).</p>}
 
       {groups.length === 0 ? (
-        <p className="muted">I gruppi non sono ancora stati creati.</p>
+        <p className="muted">{programmate.length ? 'Questa programmata non ha ancora gruppi.' : 'Le programmate non sono ancora state create.'}</p>
       ) : (
         <div className="grid" ref={gridRef}>
           {groups.map((g) => (

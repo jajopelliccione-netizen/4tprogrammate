@@ -9,7 +9,7 @@ import { formatDate } from '../../lib/dates';
 import { errMsg } from '../../hooks';
 
 export default function Segna() {
-  const { groups, groupsById, studentsById, today, history, nameOf } = useData();
+  const { groups, groupsById, studentsById, today, history, nameOf, currentPid, groupLabel } = useData();
   const toast = useToast();
   const [gid, setGid] = useState('');
   const [busy, setBusy] = useState(false);
@@ -19,7 +19,8 @@ export default function Segna() {
   useEffect(() => { if (!gid || !groupsById[gid]) setGid(auto); }, [auto, gid, groupsById]);
   const g = groupsById[gid];
 
-  const lastUndoable = history.find((e) => e.by === 'admin' && !e.undone && e.prev && Object.keys(e.prev).length + (e.created?.length || 0) > 0);
+  const lastUndoable = history.find((e) => e.by === 'admin' && !e.undone && e.prev && (e.pid ?? '') === currentPid
+    && Object.keys(e.prev).length + (e.created?.length || 0) > 0);
 
   async function act(fn) {
     setBusy(true);
@@ -27,14 +28,14 @@ export default function Segna() {
   }
   const undo = (e) => act(async () => { await undoEntry(e); toast('Azione annullata.'); });
   async function commit(changed, entry, msg) {
-    await commitChange({ changed, entry, groupsById, studentsById });
+    await commitChange({ changed, entry, groupsById, studentsById, pid: currentPid });
     toast(msg, { action: { label: 'Annulla', onClick: () => undoLatest() } });
   }
   // dopo il commit lo storico si aggiorna da solo: al tap si annulla la voce più recente (ref = valore aggiornato)
   const histRef = useRef(history);
   histRef.current = history;
   const undoLatest = () => {
-    const e = histRef.current.find((h) => h.by === 'admin' && !h.undone && h.prev);
+    const e = histRef.current.find((h) => h.by === 'admin' && !h.undone && h.prev);  // la più recente (appena fatta)
     if (e) undoEntry(e).then(() => toast('Azione annullata.')).catch((er) => toast(errMsg(er), { error: true }));
   };
 
@@ -89,7 +90,7 @@ export default function Segna() {
 
       <div className="undo">
         <button className="danger" disabled={busy || !lastUndoable} onClick={() => undo(lastUndoable)}>↩️ Annulla ultima azione</button>
-        {lastUndoable && <small>{entryText(lastUndoable, nameOf)}</small>}
+        {lastUndoable && <small>{entryText(lastUndoable, nameOf, groupLabel)}</small>}
       </div>
     </>
   );

@@ -101,8 +101,9 @@ Ogni volta che cambi le variabili d'ambiente devi rifare il deploy (le variabili
 Scheda **Admin** (in basso):
 
 1. **🔑 Accessi** → incolla l'elenco dei nomi (uno per riga) → *Importa*. Per ogni studente compaiono **Copia** e **Copia messaggio WhatsApp**; c'è anche **Copia tutti i link**. Vedi chi è "Attivo". **Resetta accesso** (password dimenticata) genera un nuovo link e invalida il vecchio account.
-2. **👥 Gruppi** → *Distribuisci automaticamente* (22 studenti → 6 gruppi, posti liberi nell'ultimo), poi *Date a cadenza* o una data per gruppo. Sposta gli studenti col **drag & drop** (su telefono: tieni premuto e trascina, oppure tocca il nome e poi il posto). Tocca un nome → **Escludi dalle programmate / Reinserisci**. Il sostituto è automatico (1° del gruppo successivo) ma si può cambiare a mano.
-3. **✅ Segna** → *Interrogato* / *Assente* / *In attesa* con un tap. L'assenza fa lo scambio sostituto⇄assente da sola. **↩️ Annulla ultima azione** ripristina i gruppi com'erano.
+2. **Programmate (materie)** → in cima alla scheda Admin tocca **+ Nuova**, scrivi la materia (es. *Italiano*) e crea la programmata. Ogni materia ha i suoi gruppi, le sue date e le sue interrogazioni; gli studenti scelgono la materia dalle schede in cima alla Cartina.
+3. **👥 Gruppi** (della programmata scelta) → *Distribuisci automaticamente* (22 studenti → 6 gruppi, posti liberi nell'ultimo; se avanza qualcuno il 5° posto va agli ultimi gruppi, es. 17 studenti in 4 gruppi → 4, 4, 4, 5), oppure *Importa gruppi da testo*. Con **+ Aggiungi persona** un gruppo passa da 4 a 5, poi *Date a cadenza* o una data per gruppo. Sposta gli studenti col **drag & drop** (su telefono: tieni premuto e trascina, oppure tocca il nome e poi il posto). Tocca un nome → **Escludi dalle programmate / Reinserisci**. Il sostituto è automatico (1° del gruppo successivo) ma si può cambiare a mano.
+4. **✅ Segna** → *Interrogato* / *Assente* / *In attesa* con un tap. L'assenza fa lo scambio sostituto⇄assente da sola. **↩️ Annulla ultima azione** ripristina i gruppi com'erano.
 
 Gli studenti vedono la **Cartina**, chiedono scambi toccando il nome di un compagno e li gestiscono nella scheda **Scambi** (badge rosso sulle richieste ricevute). **Storico** mostra scambi, assenze e interrogazioni; dalla Cartina si scarica un'immagine o si stampa/salva in PDF.
 
@@ -112,7 +113,8 @@ Gli studenti vedono la **Cartina**, chiedono scambi toccando il nome di un compa
 students/{id}   name, activated, uid, authEmail, excluded, order
 invites/{token} studentId, authEmail, used, usedByUid, usedAt
 users/{uid}     role ('admin'|'student'), studentId, inviteToken
-groups/{g01…}   number, date, startsAt, seats[4], status[4], subId, absentIds[], done, lastSwapId
+programmate/{id} subject (materia), order
+groups/{id}     pid (programmata), number, date, startsAt, seats[4 o 5], status[4 o 5], subId, absentIds[], done, lastSwapId
 swaps/{id}      fromUid, toUid, fromSid, toSid, fromGroup, fromPos, toGroup, toPos, status
 history/{id}    type, at, … (le voci admin contengono anche `prev` per l'annulla)
 ```

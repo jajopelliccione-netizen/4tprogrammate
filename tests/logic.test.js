@@ -93,7 +93,16 @@ test('distribuzione: 22 studenti → 6 gruppi, 2 posti liberi nell\'ultimo; le d
   assert.deepEqual(groups.g06.seats, ['s20', 's21', '', '']);
   assert.equal(overflow, 0);
   assert.deepEqual(deleted, []);
-  assert.deepEqual(distribute(ids, 5, existing).overflow, 2);
+  // 22 studenti in 5 gruppi: gli ultimi due gruppi hanno 5 posti
+  const five = distribute(ids, 5, existing);
+  assert.equal(five.overflow, 0);
+  assert.deepEqual(five.groups.g04.seats.length, 5);
+  assert.deepEqual(five.groups.g03.seats.length, 4);
+  assert.equal(distribute(Array.from({ length: 30 }, (_, i) => `s${i}`), 5, []).overflow, 5);
+  // 17 studenti in 4 gruppi: 4, 4, 4, 5
+  const sev = distribute(Array.from({ length: 17 }, (_, i) => `s${i}`), 4, [], 'pX');
+  assert.deepEqual(Object.values(sev.groups).map((g) => g.seats.length), [4, 4, 4, 5]);
+  assert.ok('pX_g04' in sev.groups);
 });
 
 test('finalize: gruppo vuoto non è "fatto"', () => {

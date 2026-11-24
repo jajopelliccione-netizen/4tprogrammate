@@ -1,8 +1,8 @@
-import { groupNumber } from './groups';
 
 // Testo italiano di una voce di storico. Le voci contengono solo id, i nomi si leggono qui.
-export function entryText(e, nameOf) {
-  const g = (id) => `Gruppo ${groupNumber(id)}`;
+// gl(id) = etichetta del gruppo (es. "Gruppo 3")
+export function entryText(e, nameOf, gl) {
+  const g = gl;
   switch (e.type) {
     case 'swap':
       return `Scambio: ${nameOf(e.fromSid)} (${g(e.fromGroup)}) ⇄ ${nameOf(e.toSid)} (${g(e.toGroup)})`;

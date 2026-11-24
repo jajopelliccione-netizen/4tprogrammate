@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import { acceptSwap, setSwapStatus } from '../lib/swaps';
-import { groupNumber } from '../lib/groups';
 import { formatDate } from '../lib/dates';
 import { errMsg } from '../hooks';
 
@@ -15,7 +14,7 @@ const LABEL = {
 
 export default function Scambi() {
   const { isAdmin } = useAuth();
-  const { incoming, outgoing, nameOf, groupsById, today, isLive } = useData();
+  const { incoming, outgoing, nameOf, groupsById, today, isLive, groupLabel, subjectOf } = useData();
   const toast = useToast();
   const [busy, setBusy] = useState('');
   if (isAdmin) return <Navigate to="/" replace />;
@@ -37,7 +36,8 @@ export default function Scambi() {
   const desc = (sw) => {
     const a = groupsById[sw.fromGroup];
     const b = groupsById[sw.toGroup];
-    return `${nameOf(sw.fromSid)} (Gruppo ${groupNumber(sw.fromGroup)}, ${formatDate(a?.date)}) ⇄ ${nameOf(sw.toSid)} (Gruppo ${groupNumber(sw.toGroup)}, ${formatDate(b?.date)})`;
+    const mat = subjectOf(sw.fromGroup);
+    return `${mat ? `[${mat}] ` : ''}${nameOf(sw.fromSid)} (${groupLabel(sw.fromGroup)}, ${formatDate(a?.date)}) ⇄ ${nameOf(sw.toSid)} (${groupLabel(sw.toGroup)}, ${formatDate(b?.date)})`;
   };
   const statusOf = (sw) => (sw.status === 'pending' && !isLive(sw) ? 'expired' : sw.status);
 

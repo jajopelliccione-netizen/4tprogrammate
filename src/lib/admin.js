@@ -12,7 +12,7 @@ const stripId = ({ id, ...rest }) => rest;
 // Applica modifiche ai gruppi e registra nello storico lo stato PRECEDENTE,
 // così "Annulla ultima azione" può ripristinarlo.
 //   changed: { gid: nuovoDoc }, deleted: [gid], studentPatches: { sid: {excluded} }
-export async function commitChange({ changed = {}, deleted = [], studentPatches = {}, entry, groupsById, studentsById = {} }) {
+export async function commitChange({ changed = {}, deleted = [], studentPatches = {}, entry, groupsById, studentsById = {}, pid = '' }) {
   const batch = writeBatch(db);
   const prev = {};
   const created = [];
@@ -33,7 +33,7 @@ export async function commitChange({ changed = {}, deleted = [], studentPatches 
   }
   if (entry) {
     batch.set(doc(collection(db, 'history')), {
-      ...entry, at: serverTimestamp(), by: 'admin', prev, created, prevStudents, undone: false,
+      ...entry, pid, at: serverTimestamp(), by: 'admin', prev, created, prevStudents, undone: false,
     });
   }
   await batch.commit();
@@ -62,12 +62,28 @@ export async function setGroupDates(groups, dates) {
   await batch.commit();
 }
 
-export const addGroup = (groups) => {
+export const addGroup = (groups, pid = '') => {
   const n = groups.length ? Math.max(...groups.map((g) => g.number)) + 1 : 1;
   const batch = writeBatch(db);
-  batch.set(doc(db, 'groups', groupId(n)), emptyGroup(n));
+  batch.set(doc(db, 'groups', groupId(n, pid)), emptyGroup(n, { pid }));
   return batch.commit();
 };
+
+// ------------------------------------------------------------ programmate ---
+// Una programmata = una materia, con i suoi gruppi.
+export async function createProgrammata(subject, programmate) {
+  const ref = doc(collection(db, 'programmate'));
+  const order = programmate.reduce((m, p) => Math.max(m, p.order ?? 0), 0) + 1;
+  await setDoc(ref, { subject: subject.trim(), order, createdAt: serverTimestamp() });
+  return ref.id;
+}
+export const renameProgrammata = (id, subject) => updateDoc(doc(db, 'programmate', id), { subject: subject.trim() });
+export async function deleteProgrammata(id, groups) {
+  const batch = writeBatch(db);
+  groups.forEach((g) => batch.delete(doc(db, 'groups', g.id)));
+  if (id) batch.delete(doc(db, 'programmate', id));
+  await batch.commit();
+}
 
 export const deleteGroup = (gid) => deleteDoc(doc(db, 'groups', gid));
 
@@ -150,5 +166,3 @@ export async function copyText(text) {
     return ok;
   }
 }
-
-export const setSubject = (subject) => setDoc(doc(db, 'config', 'main'), { subject: subject.trim() }, { merge: true });

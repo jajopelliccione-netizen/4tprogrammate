@@ -37,6 +37,9 @@ service cloud.firestore {
     // Il giorno dell'interrogazione non è ancora iniziato (data futura, ora Italia
     // già inclusa perché startsAt è la mezzanotte locale scelta dall'admin).
     // Gruppo senza data → ancora scambiabile.
+    // Programmata (materia) di un gruppo ('' per i gruppi senza pid).
+    function pidOf(g) { return ('pid' in g) ? g.pid : ''; }
+
     function dayNotStarted(g) {
       return !('startsAt' in g) || g.startsAt == null || request.time < g.startsAt;
     }
@@ -183,7 +186,8 @@ service cloud.firestore {
       function swapValid(sw) {
         let ga = get(groupPath(sw.fromGroup)).data;
         let gb = get(groupPath(sw.toGroup)).data;
-        return ga.seats[sw.fromPos] == sw.fromSid
+        return pidOf(ga) == pidOf(gb)   // si scambia solo dentro la stessa programmata
+          && ga.seats[sw.fromPos] == sw.fromSid
           && gb.seats[sw.toPos] == sw.toSid
           && ga.status[sw.fromPos] == 'attesa'
           && gb.status[sw.toPos] == 'attesa'
@@ -232,9 +236,10 @@ service cloud.firestore {
       }
     }
 
-    // ------------------------------------------------------------------ config --
-    // Impostazioni generali (es. materia). Le legge chi ha un account, le scrive l'admin.
-    match /config/{id} {
+    // -------------------------------------------------------------- programmate --
+    // Una programmata = una materia (es. Italiano) con i suoi gruppi (groups.pid).
+    // La leggono tutti gli account validi, la gestisce solo l'admin.
+    match /programmate/{pid} {
       allow read: if isMember();
       allow write: if isAdmin();
     }

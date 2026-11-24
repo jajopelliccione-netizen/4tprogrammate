@@ -58,12 +58,13 @@ export function parseGroupsText(text, students) {
 }
 
 // Costruisce i documenti Firestore, mantenendo le date dei gruppi già esistenti.
-export function buildImport(parsed, existing) {
+export function buildImport(parsed, existing, pid = '') {
   const byNumber = new Map(existing.map((g) => [g.number, g]));
   const changed = {};
   for (const g of parsed) {
     const old = byNumber.get(g.number);
-    changed[groupId(g.number)] = finalize(emptyGroup(g.number, {
+    changed[groupId(g.number, pid)] = finalize(emptyGroup(g.number, {
+      pid,
       seats: g.seats,
       status: g.seats.map(() => WAIT),
       subId: g.subId,
