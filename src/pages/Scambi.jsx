@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import { acceptSwap, setSwapStatus } from '../lib/swaps';
+import { colorOf } from '../components/GroupCard';
 import { formatDate } from '../lib/dates';
 import { errMsg } from '../hooks';
 
@@ -12,9 +13,21 @@ const LABEL = {
   cancelled: 'Annullata', expired: 'Decaduta',
 };
 
+// Un lato dello scambio: chi è, in quale gruppo si trova.
+function Side({ who, gid, group, groupLabel }) {
+  const num = group?.number;
+  return (
+    <div className={`sw-side ${num ? colorOf(num) : ''} cg`}>
+      <small>{who}</small>
+      <b>{groupLabel(gid)}</b>
+      {group?.date && <em>{formatDate(group.date)}</em>}
+    </div>
+  );
+}
+
 export default function Scambi() {
   const { isAdmin } = useAuth();
-  const { incoming, outgoing, nameOf, groupsById, today, isLive, groupLabel, subjectOf } = useData();
+  const { incoming, outgoing, nameOf, groupsById, today, isLive, groupLabel, subjectOf, mySid } = useData();
   const toast = useToast();
   const [busy, setBusy] = useState('');
   if (isAdmin) return <Navigate to="/" replace />;
@@ -33,13 +46,36 @@ export default function Scambi() {
     }
   };
 
-  const desc = (sw) => {
-    const a = groupsById[sw.fromGroup];
-    const b = groupsById[sw.toGroup];
-    const mat = subjectOf(sw.fromGroup);
-    return `${mat ? `[${mat}] ` : ''}${nameOf(sw.fromSid)} (${groupLabel(sw.fromGroup)}, ${formatDate(a?.date)}) ⇄ ${nameOf(sw.toSid)} (${groupLabel(sw.toGroup)}, ${formatDate(b?.date)})`;
-  };
   const statusOf = (sw) => (sw.status === 'pending' && !isLive(sw) ? 'expired' : sw.status);
+
+  // Scheda di una richiesta: frase chiara + i due gruppi affiancati.
+  function Card({ sw, actions, old }) {
+    const iAmSender = sw.fromSid === mySid;
+    const otherSid = iAmSender ? sw.toSid : sw.fromSid;
+    const mine = iAmSender ? { gid: sw.fromGroup } : { gid: sw.toGroup };
+    const theirs = iAmSender ? { gid: sw.toGroup } : { gid: sw.fromGroup };
+    const mat = subjectOf(sw.fromGroup);
+    return (
+      <div className={`item swcard ${old ? 'old' : ''}`}>
+        <div className="sw-top">
+          {mat && <span className="pill">{mat}</span>}
+          {old && <span className={`pill st-${statusOf(sw)}`}>{LABEL[statusOf(sw)]}</span>}
+        </div>
+        <p className="sw-sentence">
+          {iAmSender
+            ? <>Hai chiesto a <b>{nameOf(otherSid)}</b> di scambiare il posto.</>
+            : <><b>{nameOf(otherSid)}</b> vuole scambiare il posto con te.</>}
+        </p>
+        <div className="sw-sides">
+          <Side who="Tu" gid={mine.gid} group={groupsById[mine.gid]} groupLabel={groupLabel} />
+          <span className="sw-arrow">⇄</span>
+          <Side who={nameOf(otherSid)} gid={theirs.gid} group={groupsById[theirs.gid]} groupLabel={groupLabel} />
+        </div>
+        {!old && <small className="sw-help">{iAmSender ? 'Aspetta che risponda.' : 'Se accetti, i vostri posti si scambiano.'}</small>}
+        {actions}
+      </div>
+    );
+  }
 
   const inPending = incoming.filter((s) => s.status === 'pending' && isLive(s));
   const outPending = outgoing.filter((s) => s.status === 'pending' && isLive(s));
@@ -53,36 +89,29 @@ export default function Scambi() {
       <h2>Richieste ricevute</h2>
       {inPending.length === 0 && <p className="muted">Nessuna richiesta da gestire.</p>}
       {inPending.map((sw) => (
-        <div className="item" key={sw.id}>
-          <p>{desc(sw)}</p>
+        <Card key={sw.id} sw={sw} actions={(
           <div className="row">
             <button className="primary" disabled={busy === sw.id}
               onClick={() => run(sw.id, () => acceptSwap(sw.id, today), 'Scambio fatto! 🎉')}>Accetta</button>
             <button disabled={busy === sw.id}
               onClick={() => run(sw.id, () => setSwapStatus(sw.id, 'rejected'), 'Richiesta rifiutata.')}>Rifiuta</button>
           </div>
-        </div>
+        )} />
       ))}
 
       <h2>Richieste inviate</h2>
       {outPending.length === 0 && <p className="muted">Nessuna richiesta in attesa.</p>}
       {outPending.map((sw) => (
-        <div className="item" key={sw.id}>
-          <p>{desc(sw)}</p>
+        <Card key={sw.id} sw={sw} actions={(
           <button disabled={busy === sw.id}
             onClick={() => run(sw.id, () => setSwapStatus(sw.id, 'cancelled'), 'Richiesta annullata.')}>Annulla richiesta</button>
-        </div>
+        )} />
       ))}
 
       {past.length > 0 && (
         <>
           <h2>Precedenti</h2>
-          {past.map((sw) => (
-            <div className="item old" key={sw.id}>
-              <p>{desc(sw)}</p>
-              <span className={`pill st-${statusOf(sw)}`}>{LABEL[statusOf(sw)]}</span>
-            </div>
-          ))}
+          {past.map((sw) => <Card key={sw.id} sw={sw} old />)}
         </>
       )}
     </>
