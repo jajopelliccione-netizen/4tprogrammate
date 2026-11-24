@@ -18,7 +18,7 @@ export default function GroupCard({ group, groups, studentsById, today, mySid, o
         <div className="data">
           {isToday && <span className="pill oggi-pill">OGGI</span>}
           {group.done && <span className="pill">fatto</span>}
-          <span>{formatDate(group.date)}</span>
+          <span className={group.date ? '' : 'nodate'}>{formatDate(group.date)}</span>
         </div>
       </header>
       <ul>

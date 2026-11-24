@@ -101,15 +101,18 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                 </span>
                 {mine ? (
                   <span className="mc-mine">
-                    Tu: <b>Gruppo {mine.group.number}</b> · {formatDate(mine.group.date)}
-                    <span className={`pill ${mine.days === 0 && mine.upcoming ? 'oggi-pill' : ''}`}>
-                      {mine.upcoming ? whenLabel(mine.days) : STATO[mine.status] || 'fatto'}
-                    </span>
+                    Tu: <b>Gruppo {mine.group.number}</b>
+                    {mine.group.date && <> · {formatDate(mine.group.date)}</>}
+                    {(mine.days !== null || !mine.upcoming) && (
+                      <span className={`pill ${mine.days === 0 && mine.upcoming ? 'oggi-pill' : ''}`}>
+                        {mine.upcoming ? whenLabel(mine.days) : STATO[mine.status] || 'fatto'}
+                      </span>
+                    )}
                   </span>
                 ) : null}
                 <span className="mc-sub">
                   {mySid && !mine ? 'Non sei in questa programmata · ' : ''}
-                  {sum.next ? `Prossimo: Gruppo ${sum.next.number}, ${whenLabel(sum.nextDays)}` : sum.total ? 'Tutti i gruppi fatti' : 'Nessun gruppo'}
+                  {sum.next ? `Prossimo: Gruppo ${sum.next.number}${sum.nextDays !== null ? `, ${whenLabel(sum.nextDays)}` : ''}` : sum.total ? 'Tutti i gruppi fatti' : 'Nessun gruppo'}
                 </span>
               </button>
               {open && renderOpen(p.id)}
