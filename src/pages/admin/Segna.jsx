@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/Toast';
-import GroupCard from '../../components/GroupCard';
 import { undoEntry } from '../../lib/admin';
 import { useMarking } from '../../useMarking';
 import { ABSENT, DONE, WAIT, subOf } from '../../lib/groups';
@@ -10,7 +9,7 @@ import { formatDate } from '../../lib/dates';
 import { errMsg } from '../../hooks';
 
 export default function Segna() {
-  const { groups, groupsById, studentsById, today, history, nameOf, currentPid, groupLabel } = useData();
+  const { groups, groupsById, today, history, nameOf, currentPid, groupLabel } = useData();
   const { setStatus, groupDone } = useMarking();
   const toast = useToast();
   const [gid, setGid] = useState('');
@@ -46,16 +45,14 @@ export default function Segna() {
         </select>
       </div>
 
-      <GroupCard group={g} groups={groups} studentsById={studentsById} today={today} mySid={null} />
-
       <ul className="rows">
         {g.seats.map((sid, i) => sid && (
           <li key={i} className="srow">
-            <div className="sname"><b>{nameOf(sid)}</b><span className="pill">{g.status[i]}</span></div>
-            <div className="row">
-              <button className="primary" disabled={busy || g.status[i] === DONE} onClick={() => setSt(i, DONE)}>Interrogato</button>
-              <button disabled={busy || g.status[i] === ABSENT} onClick={() => setSt(i, ABSENT)}>Assente</button>
-              <button disabled={busy || g.status[i] === WAIT} onClick={() => setSt(i, WAIT)}>In attesa</button>
+            <div className="sname"><b>{nameOf(sid)}</b><span className={`pill st-${g.status[i]}`}>{g.status[i]}</span></div>
+            <div className="trio">
+              <button className="primary" disabled={busy || g.status[i] === DONE} onClick={() => setSt(i, DONE)}>✓ Interrogato</button>
+              <button disabled={busy || g.status[i] === ABSENT} onClick={() => setSt(i, ABSENT)}>✗ Assente</button>
+              <button disabled={busy || g.status[i] === WAIT} onClick={() => setSt(i, WAIT)}>↩ Attesa</button>
             </div>
           </li>
         ))}

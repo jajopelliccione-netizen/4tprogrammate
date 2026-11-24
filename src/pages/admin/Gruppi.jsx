@@ -181,8 +181,8 @@ export default function Gruppi() {
                 <span className="dategrp">
                   <input type="date" value={g.date || ''} onChange={(e) => run(() => setGroupDate(g.id, e.target.value))} />
                   {g.date && (
-                    <button type="button" className="small cleardate" disabled={busy} aria-label="Togli la data"
-                      onClick={() => run(() => setGroupDate(g.id, ''))}>✕ Togli data</button>
+                    <button type="button" className="small cleardate" disabled={busy} aria-label="Togli la data" title="Togli la data"
+                      onClick={() => run(() => setGroupDate(g.id, ''))}>✕</button>
                   )}
                 </span>
               </header>
@@ -204,10 +204,10 @@ export default function Gruppi() {
                   </select>
                 </label>
                 {g.seats.length < MAX_SEATS && (
-                  <button className="small addseat" disabled={busy} onClick={() => changeSeats(g, true)}>+ Aggiungi persona</button>
+                  <button className="small addseat" title="Aggiungi una persona al gruppo" disabled={busy} onClick={() => changeSeats(g, true)}>+ Persona</button>
                 )}
                 {g.seats.length >= MAX_SEATS && !g.seats[g.seats.length - 1] && (
-                  <button className="small addseat" disabled={busy} onClick={() => changeSeats(g, false)}>− Togli 5° posto</button>
+                  <button className="small addseat" disabled={busy} onClick={() => changeSeats(g, false)}>− Posto</button>
                 )}
                 {g.seats.every((s) => !s) && g.number === lastNumber && (
                   <button className="danger small" disabled={busy} onClick={() => run(() => deleteGroup(g.id))}>Elimina gruppo</button>

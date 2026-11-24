@@ -219,3 +219,20 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .markbtns { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; } .markbtns button { width: 100%; justify-content: flex-start; text-align: left; }
 .markinfo { font-size: .86rem; color: var(--muted); margin: 2px 0 4px 4px; }
 .hero-btn { margin-top: 16px; width: 100%; background: #ffffff; color: var(--brand); border: 0; font-weight: 800; } .hero-btn:hover { background: #ffffffee; } @media print { .hero-btn { display: none; } }
+
+/* ---- pulizia grafica ---- */
+.reqlist { height: 104px; } .reqempty { font-size: .88rem; }
+.matcard.light { padding: 10px 14px; gap: 2px; box-shadow: none; background: var(--surface-2); } .matcard.light .mc-title { font-size: .98rem; font-weight: 700; }
+.trio { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 6px; margin-top: 8px; } .trio button { padding: 8px 6px; font-size: .88rem; min-height: 42px; white-space: nowrap; }
+.pill.st-attesa { background: var(--surface-2); } .pill.st-interrogato { background: #dcfce7; color: #166534; border-color: transparent; } .pill.st-assente { background: #ffe4e6; color: #9f1239; border-color: transparent; }
+
+/* Gruppi (admin): schede più compatte */
+.dategrp { flex-direction: row; align-items: center; gap: 6px; }
+.gcard header .cleardate { min-height: 34px; width: 34px; padding: 0; border-radius: 10px; }
+.board .chip, .gcard .chip { min-height: 36px; padding: 6px 12px; font-size: .9rem; font-weight: 600; }
+.gcard .slot { min-height: 40px; }
+.gcard footer { flex-wrap: nowrap; }
+.gcard footer .sublabel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; } .gcard footer .sublabel select { flex: 1; min-width: 0; margin: 0; }
+.gcard footer .addseat { margin-left: 0; white-space: nowrap; flex: none; }
+.gcard footer .danger.small { flex: none; }
+.main h2 { margin-top: 1.2rem; }

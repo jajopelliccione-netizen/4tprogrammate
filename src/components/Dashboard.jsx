@@ -87,14 +87,14 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
       <h2>Le programmate</h2>
       {programmate.length === 0 && <p className="muted">Le programmate non sono ancora state create.</p>}
       <div className="materie">
-        {programmate.map((p) => {
+        {[...programmate].sort((a, b) => Number(!entries.some((e) => e.prog.id === a.id)) - Number(!entries.some((e) => e.prog.id === b.id))).map((p) => {
           const groups = allGroups.filter((g) => pidOf(g) === p.id);
           const sum = progSummary(groups, today);
           const mine = entries.find((e) => e.prog.id === p.id);
           const open = p.id === openPid;
           return (
             <div key={p.id || 'x'} className="matwrap">
-              <button className={`matcard ${open ? 'on' : ''}`} aria-expanded={open} onClick={() => onToggle(p.id)}>
+              <button className={`matcard ${open ? 'on' : ''} ${mySid && !mine ? 'light' : ''}`} aria-expanded={open} onClick={() => onToggle(p.id)}>
                 <span className="mc-head">
                   <span className="mc-title">{p.subject}</span>
                   <span className="mc-chev">{open ? '▲' : '▼'}</span>
@@ -106,12 +106,10 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                       {mine.upcoming ? whenLabel(mine.days) : STATO[mine.status] || 'fatto'}
                     </span>
                   </span>
-                ) : mySid ? (
-                  <span className="mc-sub">Non sei in questa programmata</span>
                 ) : null}
                 <span className="mc-sub">
-                  {sum.next ? `Prossimo gruppo: ${sum.next.number} · ${whenLabel(sum.nextDays)}` : sum.total ? 'Tutti i gruppi fatti' : 'Nessun gruppo'}
-                  {' · '}{sum.done}/{sum.total} fatti
+                  {mySid && !mine ? 'Non sei in questa programmata · ' : ''}
+                  {sum.next ? `Prossimo: Gruppo ${sum.next.number}, ${whenLabel(sum.nextDays)}` : sum.total ? 'Tutti i gruppi fatti' : 'Nessun gruppo'}
                 </span>
               </button>
               {open && renderOpen(p.id)}

@@ -11,12 +11,12 @@ export default function Admin() {
   const pick = (t) => { setTab(t); sessionStorage.setItem('admintab', t); };
   return (
     <>
-      <ProgrammataPicker admin />
       <div className="seg">
         {TABS.map(([k, l]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => pick(k)}>{l}</button>
         ))}
       </div>
+      {tab !== 'accessi' && <ProgrammataPicker admin />}
       {tab === 'segna' && <Segna />}
       {tab === 'gruppi' && <Gruppi />}
       {tab === 'accessi' && <Accessi />}
