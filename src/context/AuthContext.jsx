@@ -11,10 +11,10 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined);
   const [profile, setProfile] = useState(undefined);
 
-  useEffect(() => onAuthStateChanged(auth, (u) => {
+  useEffect(() => (!auth ? undefined : onAuthStateChanged(auth, (u) => {
     setUser(u);
     if (!u) setProfile(null);
-  }), []);
+  })), []);
 
   useEffect(() => {
     if (!user) return undefined;
