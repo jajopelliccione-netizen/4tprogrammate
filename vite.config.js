@@ -7,5 +7,17 @@ const build = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', day:
 export default defineConfig({
   define: { __BUILD__: JSON.stringify(build) },
   plugins: [react()],
-  build: { outDir: 'dist', chunkSizeWarningLimit: 900 },
+  build: {
+    outDir: 'dist',
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // librerie che cambiano di rado in file a parte: restano nella cache del telefono tra un aggiornamento e l'altro
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+        },
+      },
+    },
+  },
 });

@@ -40,7 +40,7 @@ export function DataProvider({ children }) {
         setRulesError(true);
       }),
       onSnapshot(collection(db, 'groups'), (s) => setGroups(s.docs.map(withId)), (e) => { console.error(e); setGroups([]); }),
-      onSnapshot(query(collection(db, 'history'), orderBy('at', 'desc'), limit(300)), (s) => setHistory(s.docs.map(withId)), err),
+      onSnapshot(query(collection(db, 'history'), orderBy('at', 'desc'), limit(120)), (s) => setHistory(s.docs.map(withId)), err),
     ];
     if (!isAdmin && profile?.studentId) {
       subs.push(

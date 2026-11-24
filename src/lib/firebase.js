@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { browserLocalPersistence, connectAuthEmulator, indexedDBLocalPersistence, initializeAuth } from 'firebase/auth';
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
 
 const env = import.meta.env;
 
@@ -17,7 +17,9 @@ const app = configured ? initializeApp({
   appId: env.VITE_FIREBASE_APP_ID,
 }) : null;
 
-export const auth = app ? getAuth(app) : null;
+// Auth "leggero": niente login con popup/redirect (non lo usiamo) → meno codice da scaricare.
+export const auth = app ? initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] }) : null;
+
 export const db = app ? getFirestore(app) : null;
 
 // Sviluppo locale con gli emulatori (VITE_USE_EMULATORS=true)

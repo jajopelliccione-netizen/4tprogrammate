@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { toPng } from 'html-to-image';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
@@ -90,6 +89,7 @@ export default function Cartina() {
 
   async function download() {
     try {
+      const { toPng } = await import('html-to-image');   // caricata solo quando serve
       const url = await toPng(gridRef.current, { backgroundColor: '#ffffff', pixelRatio: 2 });
       const a = document.createElement('a');
       a.href = url;

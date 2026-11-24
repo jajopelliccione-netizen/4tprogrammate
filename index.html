@@ -14,11 +14,23 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="color-scheme" content="light dark" />
     <title>Quarta T</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- collegamenti ai server Firebase aperti in anticipo: la prima richiesta parte prima -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
+    <link rel="dns-prefetch" href="https://securetoken.googleapis.com" />
+    <style>
+      /* schermata iniziale: compare subito, prima che il sito sia scaricato (così non sembra "bianco") */
+      html,body{margin:0;background:#f4f6fb}
+      #boot{min-height:100dvh;display:grid;place-items:center;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+      #boot div{display:flex;flex-direction:column;align-items:center;gap:16px;color:#55627a;font-size:15px;font-weight:600}
+      #boot b{width:64px;height:64px;border-radius:18px;background:#4338ca;color:#fff;display:grid;place-items:center;font-size:24px;font-weight:800;animation:bp 1.2s ease-in-out infinite}
+      @keyframes bp{50%{transform:scale(.92);opacity:.8}}
+      @media (prefers-color-scheme:dark){html[data-theme="auto"],html[data-theme="auto"] body{background:#0b1020}html[data-theme="auto"] #boot div{color:#a3afc9}}
+      html[data-theme="dark"],html[data-theme="dark"] body{background:#0b1020}html[data-theme="dark"] #boot div{color:#a3afc9}
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div id="boot"><div><b>4T</b>Caricamento…</div></div></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

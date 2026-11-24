@@ -1,0 +1,14 @@
+# Cache di Cloudflare Pages: i file con il codice nel nome non cambiano mai → il telefono li tiene per un anno.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/icons/*
+  Cache-Control: public, max-age=86400
+/favicon.svg
+  Cache-Control: public, max-age=86400
+# la pagina e il manifest invece si controllano sempre, così gli aggiornamenti arrivano subito
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache

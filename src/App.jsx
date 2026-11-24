@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
@@ -8,7 +9,8 @@ import Cartina from './pages/Cartina';
 import Scambi from './pages/Scambi';
 import Storico from './pages/Storico';
 import Profilo from './pages/Profilo';
-import Admin from './pages/Admin';
+// la parte admin (con il drag & drop) si scarica solo quando l'admin la apre
+const Admin = lazy(() => import('./pages/Admin'));
 import { configured } from './lib/firebase';
 
 function Splash({ children }) {
@@ -56,7 +58,7 @@ export default function App() {
         <Route path="scambi" element={<Scambi />} />
         <Route path="storico" element={<Storico />} />
         <Route path="profilo" element={<Profilo />} />
-        <Route path="admin" element={<AdminOnly><Admin /></AdminOnly>} />
+        <Route path="admin" element={<AdminOnly><Suspense fallback={<p className="muted">Caricamento…</p>}><Admin /></Suspense></AdminOnly>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
