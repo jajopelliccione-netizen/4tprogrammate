@@ -166,3 +166,14 @@ export async function copyText(text) {
     return ok;
   }
 }
+
+// ----------------------------------------------------------------- storico ---
+export const deleteHistoryEntry = (id) => deleteDoc(doc(db, 'history', id));
+
+export async function deleteHistoryEntries(ids) {
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + 400).forEach((id) => batch.delete(doc(db, 'history', id)));
+    await batch.commit();
+  }
+}

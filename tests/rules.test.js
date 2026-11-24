@@ -368,3 +368,17 @@ test('non si scambia tra programmate (materie) diverse', async () => {
   });
   await assertSucceeds(setDoc(doc(as(UA), 'swaps', 'sy'), swapData()));
 });
+
+test('storico: l\'admin può eliminare le voci, uno studente no', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const sdb = ctx.firestore();
+    await setDoc(doc(sdb, 'history', 'h1'), { type: 'absenza', at: Timestamp.now() });
+    await setDoc(doc(sdb, 'history', 'h2'), { type: 'absenza', at: Timestamp.now() });
+  });
+  await assertFails(deleteDoc(doc(as(UA), 'history', 'h1')));
+  const adb = as(ADMIN);
+  await assertSucceeds(deleteDoc(doc(adb, 'history', 'h1')));
+  const b = writeBatch(adb);
+  b.delete(doc(adb, 'history', 'h2'));
+  await assertSucceeds(b.commit());
+});

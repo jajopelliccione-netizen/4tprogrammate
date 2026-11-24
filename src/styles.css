@@ -193,3 +193,4 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .richieste .r-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; } .richieste small { color: #9a3412; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .richieste .r-go { font-weight: 800; font-size: .85rem; white-space: nowrap; }
 @media print { .richieste { display: none !important; } }
+.timeline li > div { flex: 1; min-width: 0; } .timeline .del { margin-left: auto; flex: none; min-height: 32px; width: 32px; padding: 0; }
