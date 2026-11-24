@@ -27,7 +27,7 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
               </div>
               <div className="hero-meta">
                 <b>Gruppo {next.group.number}</b>
-                <span>{formatDate(next.group.date, true)}</span>
+                {next.group.date && <span>{formatDate(next.group.date, true)}</span>}
               </div>
               <div className="hero-with">
                 <small>Con</small>

@@ -236,3 +236,7 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .gcard footer .addseat { margin-left: 0; white-space: nowrap; flex: none; }
 .gcard footer .danger.small { flex: none; }
 .main h2 { margin-top: 1.2rem; }
+
+/* compagni di gruppo: tutti sulla stessa riga, a colonne uguali */
+.mates { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.mate { padding: 9px 6px; text-align: center; font-size: .82rem; line-height: 1.2; border-radius: 12px; overflow-wrap: anywhere; display: flex; align-items: center; justify-content: center; min-height: 44px; }
