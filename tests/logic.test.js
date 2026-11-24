@@ -1,0 +1,117 @@
+// Test della logica pura (assenze, spostamenti, distribuzione).  npm run test:logic
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  ABSENT, DONE, WAIT, applyAbsence, applyStatus, distribute, emptyGroup, finalize, findSeat,
+  groupId, moveStudent, subOf,
+} from '../src/lib/groups.js';
+import { seatSwappable, swapValidNow } from '../src/lib/swapRules.js';
+
+const mk = (n, seats, extra = {}) => ({ id: groupId(n), ...emptyGroup(n, { seats, ...extra }) });
+const base = () => [mk(1, ['a', 'b', 'c', 'd']), mk(2, ['e', 'f', 'g', 'h']), mk(3, ['i', 'j', '', ''])];
+
+test('sostituto automatico = 1° del gruppo successivo; ultimo gruppo: nessuno', () => {
+  const gs = base();
+  assert.equal(subOf(gs, gs[0]), 'e');
+  assert.equal(subOf(gs, gs[1]), 'i');
+  assert.equal(subOf(gs, gs[2]), '');
+});
+
+test('sostituto manuale valido ha la precedenza', () => {
+  const gs = base();
+  gs[0].subId = 'g';
+  assert.equal(subOf(gs, gs[0]), 'g');
+});
+
+test('assenza: l\'assente e il sostituto si scambiano di posto', () => {
+  const gs = base();
+  const { changed, info } = applyAbsence(gs, 'g01', 1); // b assente
+  assert.deepEqual(changed.g01.seats, ['a', 'e', 'c', 'd']);
+  assert.deepEqual(changed.g02.seats, ['b', 'f', 'g', 'h']);
+  assert.equal(info.sid, 'b');
+  assert.equal(info.subSid, 'e');
+  assert.equal(info.toGroup, 'g02');
+  assert.deepEqual(changed.g01.absentIds, ['b']);
+  assert.ok(changed.g01.status.every((s) => s === WAIT));
+});
+
+test('dopo un\'assenza il sostituto del gruppo non è l\'assente appena spostato', () => {
+  const gs = base();
+  const { changed } = applyAbsence(gs, 'g01', 1);
+  const after = gs.map((g) => (changed[g.id] ? { id: g.id, ...changed[g.id] } : g));
+  assert.equal(subOf(after, after[0]), 'f'); // 'b' è in g02 pos 0 ma è tra gli assenti di g01
+});
+
+test('assenza nell\'ultimo gruppo: nessun sostituto, il posto resta "assente"', () => {
+  const gs = base();
+  const { changed, info } = applyAbsence(gs, 'g03', 0);
+  assert.equal(changed.g03.status[0], ABSENT);
+  assert.equal(changed.g03.seats[0], 'i');
+  assert.equal(info.subSid, null);
+});
+
+test('stato interrogato → gruppo "fatto" quando nessuno è più in attesa', () => {
+  let gs = base();
+  for (let i = 0; i < 4; i++) {
+    const ch = applyStatus(gs, 'g01', i, DONE);
+    gs = gs.map((g) => (ch[g.id] ? { id: g.id, ...ch[g.id] } : g));
+  }
+  assert.equal(gs[0].done, true);
+  const back = applyStatus(gs, 'g01', 0, WAIT);
+  assert.equal(back.g01.done, false);
+});
+
+test('spostamento: su posto libero, su posto occupato (scambio) e fuori dai gruppi', () => {
+  const gs = base();
+  let ch = moveStudent(gs, 'a', { gid: 'g03', pos: 2 });
+  assert.equal(ch.g01.seats[0], '');
+  assert.equal(ch.g03.seats[2], 'a');
+  ch = moveStudent(gs, 'a', { gid: 'g02', pos: 0 });
+  assert.equal(ch.g01.seats[0], 'e');
+  assert.equal(ch.g02.seats[0], 'a');
+  ch = moveStudent(gs, 'a', { pool: true });
+  assert.equal(ch.g01.seats[0], '');
+  assert.equal(findSeat(gs, 'zzz'), null);
+  // dal "fuori" a un posto occupato: l'occupante esce
+  ch = moveStudent(gs, 'z', { gid: 'g01', pos: 0 });
+  assert.equal(ch.g01.seats[0], 'z');
+  assert.deepEqual(Object.keys(ch), ['g01']);
+});
+
+test('spostamento nello stesso gruppo', () => {
+  const gs = base();
+  const ch = moveStudent(gs, 'a', { gid: 'g01', pos: 3 });
+  assert.deepEqual(ch.g01.seats, ['d', 'b', 'c', 'a']);
+});
+
+test('distribuzione: 22 studenti → 6 gruppi, 2 posti liberi nell\'ultimo; le date restano', () => {
+  const ids = Array.from({ length: 22 }, (_, i) => `s${i}`);
+  const existing = [mk(1, ['', '', '', ''], { date: '2026-12-01' })];
+  const { groups, deleted, overflow } = distribute(ids, 6, existing);
+  assert.equal(Object.keys(groups).length, 6);
+  assert.equal(groups.g01.date, '2026-12-01');
+  assert.deepEqual(groups.g06.seats, ['s20', 's21', '', '']);
+  assert.equal(overflow, 0);
+  assert.deepEqual(deleted, []);
+  assert.deepEqual(distribute(ids, 5, existing).overflow, 2);
+});
+
+test('finalize: gruppo vuoto non è "fatto"', () => {
+  assert.equal(finalize(emptyGroup(1)).done, false);
+});
+
+test('scambio: validità lato client come le regole', () => {
+  const g1 = { ...emptyGroup(1, { seats: ['a', 'b', '', ''], date: '2030-01-10' }) };
+  const g2 = { ...emptyGroup(2, { seats: ['c', '', '', ''], date: '2030-01-11' }) };
+  const byId = { g01: g1, g02: g2 };
+  const sw = { fromGroup: 'g01', fromPos: 0, fromSid: 'a', toGroup: 'g02', toPos: 0, toSid: 'c' };
+  assert.ok(swapValidNow(sw, byId, '2030-01-01'));
+  assert.ok(!swapValidNow(sw, byId, '2030-01-10'), 'oggi non si scambia');
+  assert.ok(!swapValidNow(sw, byId, '2030-02-01'), 'passato');
+  g2.status[0] = DONE;
+  assert.ok(!swapValidNow(sw, byId, '2030-01-01'), 'già interrogato');
+  g2.status[0] = WAIT;
+  g2.seats[0] = 'x';
+  assert.ok(!swapValidNow(sw, byId, '2030-01-01'), 'posto cambiato → decade');
+  assert.ok(!seatSwappable(g1, 2, '2030-01-01'), 'posto vuoto');
+});

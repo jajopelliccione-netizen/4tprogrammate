@@ -1,0 +1,260 @@
+rules_version = '2';
+
+// =============================================================================
+//  Interrogazioni 4T SSA – Firestore Security Rules
+// =============================================================================
+//  Principi:
+//   • Tutto è NEGATO di default. Si apre solo ciò che è scritto qui sotto.
+//   • Il "permesso" di un account è il documento users/{uid}. Un account Firebase
+//     Auth senza quel documento non può leggere né scrivere nulla (tranne
+//     completare la propria attivazione con un token d'invito valido).
+//   • users/{uid} con role=='admin' si crea SOLO a mano dalla console Firebase.
+//     Il client non può mai darsi il ruolo admin.
+//   • Studente: modifica i gruppi SOLO tramite uno scambio che
+//       1. lui stesso (destinatario) accetta,
+//       2. era stato richiesto dall'altro studente (creato con regole valide),
+//       3. cambia soltanto i due posti coinvolti, scambiandoli esattamente.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------- helper --
+    function signedIn() { return request.auth != null; }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function groupPath(id) { return /databases/$(database)/documents/groups/$(id); }
+    function swapPath(id) { return /databases/$(database)/documents/swaps/$(id); }
+    function studentPath(id) { return /databases/$(database)/documents/students/$(id); }
+    function invitePath(id) { return /databases/$(database)/documents/invites/$(id); }
+
+    // L'utente ha un "permesso" (documento users/{uid})?
+    function hasProfile() { return signedIn() && exists(userPath(request.auth.uid)); }
+    function profile() { return get(userPath(request.auth.uid)).data; }
+    function isAdmin() { return hasProfile() && profile().role == 'admin'; }
+    function isStudent() { return hasProfile() && profile().role == 'student'; }
+    function isMember() { return hasProfile(); }
+
+    // Il giorno dell'interrogazione non è ancora iniziato (data futura, ora Italia
+    // già inclusa perché startsAt è la mezzanotte locale scelta dall'admin).
+    // Gruppo senza data → ancora scambiabile.
+    function dayNotStarted(g) {
+      return !('startsAt' in g) || g.startsAt == null || request.time < g.startsAt;
+    }
+
+    // ---------------------------------------------------------------- students --
+    // Elenco pubblico dei nomi (serve alla schermata di login prima di accedere).
+    // Non contiene nulla di segreto: l'email interna diventa pubblica solo dopo
+    // l'attivazione, quando l'account esiste già.
+    match /students/{sid} {
+      allow get, list: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || activatingStudent(sid);
+
+      // Attivazione: lo studente (non ancora con permessi) collega il suo account
+      // Auth. Valida SOLO se nello stesso batch si crea users/{uid} e si consuma
+      // l'invito, e se l'email dell'account coincide con quella dell'invito.
+      function activatingStudent(sid) {
+        let uid = request.auth.uid;
+        let after = request.resource.data;
+        let u = getAfter(userPath(uid)).data;
+        return signedIn()
+          && !exists(userPath(uid))
+          && resource.data.activated == false
+          && after.diff(resource.data).affectedKeys().hasOnly(['activated', 'uid', 'authEmail'])
+          && after.activated == true
+          && after.uid == uid
+          && u.role == 'student'
+          && u.studentId == sid
+          && get(invitePath(u.inviteToken)).data.studentId == sid
+          && get(invitePath(u.inviteToken)).data.used == false
+          && get(invitePath(u.inviteToken)).data.authEmail == after.authEmail
+          && request.auth.token.email == after.authEmail;
+      }
+    }
+
+    // ----------------------------------------------------------------- invites --
+    // Il token (id del documento) è lungo e casuale: chi lo conosce può leggere
+    // quel singolo invito (get). Nessuno può elencarli, tranne l'admin.
+    match /invites/{token} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || consumingInvite(token);
+
+      function consumingInvite(token) {
+        let uid = request.auth.uid;
+        return signedIn()
+          && !exists(userPath(uid))
+          && resource.data.used == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedAt', 'usedByUid'])
+          && request.resource.data.used == true
+          && request.resource.data.usedByUid == uid
+          && getAfter(userPath(uid)).data.inviteToken == token;
+      }
+    }
+
+    // ------------------------------------------------------------------- users --
+    // Lo studente può creare il proprio documento SOLO durante l'attivazione.
+    // Nessun update dal client. L'admin può eliminarli (reset accesso).
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if activationUserDoc(uid);
+      allow delete: if isAdmin();
+      allow update: if false;
+
+      function activationUserDoc(uid) {
+        let d = request.resource.data;
+        let inv = get(invitePath(d.inviteToken)).data;
+        return signedIn()
+          && request.auth.uid == uid
+          && d.keys().hasOnly(['role', 'studentId', 'inviteToken'])
+          && d.role == 'student'
+          && inv.studentId == d.studentId
+          && inv.used == false
+          && inv.authEmail == request.auth.token.email
+          && getAfter(invitePath(d.inviteToken)).data.used == true
+          && get(studentPath(d.studentId)).data.activated == false
+          && getAfter(studentPath(d.studentId)).data.uid == uid
+          && getAfter(studentPath(d.studentId)).data.activated == true
+          && getAfter(studentPath(d.studentId)).data.authEmail == inv.authEmail;
+      }
+    }
+
+    // ------------------------------------------------------------------ groups --
+    // seats[4]  : id degli studenti ('' = posto libero)
+    // status[4] : 'attesa' | 'interrogato' | 'assente'
+    match /groups/{gid} {
+      allow read: if isMember();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || studentSwapWrite(gid);
+
+      // Posto dopo lo scambio: j == posto di chi ha chiesto → ci va il destinatario
+      // e viceversa; tutti gli altri posti restano uguali.
+      function expSeat(oldSeats, gid, sw, j) {
+        return (gid == sw.fromGroup && j == sw.fromPos) ? sw.toSid
+             : ((gid == sw.toGroup && j == sw.toPos) ? sw.fromSid : oldSeats[j]);
+      }
+
+      function studentSwapWrite(gid) {
+        let d = request.resource.data;
+        let old = resource.data;
+        let sw = get(swapPath(d.lastSwapId)).data;
+        return isStudent()
+          && d.lastSwapId is string
+          // si possono cambiare solo i posti e il riferimento allo scambio
+          && d.diff(old).affectedKeys().hasOnly(['seats', 'lastSwapId'])
+          // lo scambio esiste, è in attesa e nello stesso batch diventa "accepted"
+          && sw.status == 'pending'
+          && getAfter(swapPath(d.lastSwapId)).data.status == 'accepted'
+          // lo accetta il destinatario (che è chi sta scrivendo)
+          && sw.toUid == request.auth.uid
+          && (gid == sw.fromGroup || gid == sw.toGroup)
+          // i posti sono ancora quelli della richiesta e non ancora interrogati
+          && (gid != sw.fromGroup || (old.seats[sw.fromPos] == sw.fromSid && old.status[sw.fromPos] == 'attesa'))
+          && (gid != sw.toGroup || (old.seats[sw.toPos] == sw.toSid && old.status[sw.toPos] == 'attesa'))
+          // gruppo non fatto e data ancora futura
+          && old.done != true
+          && dayNotStarted(old)
+          // risultato esatto
+          && d.seats.size() == 4
+          && d.seats[0] == expSeat(old.seats, gid, sw, 0)
+          && d.seats[1] == expSeat(old.seats, gid, sw, 1)
+          && d.seats[2] == expSeat(old.seats, gid, sw, 2)
+          && d.seats[3] == expSeat(old.seats, gid, sw, 3);
+      }
+    }
+
+    // ------------------------------------------------------------------- swaps --
+    match /swaps/{id} {
+      allow read: if isAdmin()
+        || (isStudent() && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid));
+
+      // Creazione: la fa chi chiede lo scambio, con posti reali, in attesa, futuri.
+      allow create: if isStudent() && validNewSwap(request.resource.data);
+
+      // Aggiornamento di stato (solo status + resolvedAt)
+      allow update: if isAdmin() || studentSwapUpdate();
+      allow delete: if isAdmin();
+
+      // Lo scambio è ancora applicabile ai gruppi come sono ADESSO?
+      function swapValid(sw) {
+        let ga = get(groupPath(sw.fromGroup)).data;
+        let gb = get(groupPath(sw.toGroup)).data;
+        return ga.seats[sw.fromPos] == sw.fromSid
+          && gb.seats[sw.toPos] == sw.toSid
+          && ga.status[sw.fromPos] == 'attesa'
+          && gb.status[sw.toPos] == 'attesa'
+          && ga.done != true && gb.done != true
+          && dayNotStarted(ga) && dayNotStarted(gb);
+      }
+
+      function validNewSwap(d) {
+        return d.keys().hasOnly(['fromUid', 'toUid', 'fromSid', 'toSid', 'fromGroup', 'fromPos',
+                                 'toGroup', 'toPos', 'status', 'createdAt', 'resolvedAt'])
+          && d.keys().hasAll(['fromUid', 'toUid', 'fromSid', 'toSid', 'fromGroup', 'fromPos',
+                              'toGroup', 'toPos', 'status', 'createdAt'])
+          && d.status == 'pending'
+          && d.fromUid == request.auth.uid
+          && d.fromSid == profile().studentId
+          && d.toSid is string && d.toSid != d.fromSid
+          && d.toUid is string
+          && get(studentPath(d.toSid)).data.uid == d.toUid
+          && d.fromGroup is string && d.toGroup is string
+          && d.fromPos is int && d.toPos is int
+          && d.fromPos >= 0 && d.fromPos < 4 && d.toPos >= 0 && d.toPos < 4
+          && d.createdAt == request.time
+          && swapValid(d);
+      }
+
+      function studentSwapUpdate() {
+        let old = resource.data;
+        let nw = request.resource.data;
+        let me = request.auth.uid;
+        return isStudent()
+          && old.status == 'pending'
+          && nw.diff(old).affectedKeys().hasOnly(['status', 'resolvedAt'])
+          && nw.resolvedAt == request.time
+          && (
+            // il destinatario ACCETTA: valido solo se i gruppi sono scambiati nello stesso batch
+            (old.toUid == me && nw.status == 'accepted' && swapValid(old)
+              && getAfter(groupPath(old.fromGroup)).data.seats[old.fromPos] == old.toSid
+              && getAfter(groupPath(old.toGroup)).data.seats[old.toPos] == old.fromSid)
+            // il destinatario RIFIUTA
+            || (old.toUid == me && nw.status == 'rejected')
+            // chi ha chiesto ANNULLA
+            || (old.fromUid == me && nw.status == 'cancelled')
+            // uno dei due segna come DECADUTA una richiesta non più applicabile
+            || ((old.fromUid == me || old.toUid == me) && nw.status == 'expired' && !swapValid(old))
+          );
+      }
+    }
+
+    // ----------------------------------------------------------------- history --
+    // Storico leggibile da chi ha un account. Scrive l'admin; lo studente può
+    // scrivere SOLO la voce di uno scambio che sta accettando (id = id scambio),
+    // con campi identici a quelli dello scambio (nessun testo libero).
+    match /history/{hid} {
+      allow read: if isMember();
+      allow create: if isAdmin() || swapHistory(hid);
+      allow update, delete: if isAdmin();
+
+      function swapHistory(hid) {
+        let d = request.resource.data;
+        let before = get(swapPath(hid)).data;
+        let after = getAfter(swapPath(hid)).data;
+        return isStudent()
+          && d.keys().hasOnly(['type', 'swapId', 'at', 'fromSid', 'toSid', 'fromGroup', 'fromPos', 'toGroup', 'toPos'])
+          && d.type == 'swap'
+          && d.swapId == hid
+          && d.at == request.time
+          && before.status == 'pending'
+          && after.status == 'accepted'
+          && before.toUid == request.auth.uid
+          && d.fromSid == before.fromSid && d.toSid == before.toSid
+          && d.fromGroup == before.fromGroup && d.fromPos == before.fromPos
+          && d.toGroup == before.toGroup && d.toPos == before.toPos;
+      }
+    }
+  }
+}
