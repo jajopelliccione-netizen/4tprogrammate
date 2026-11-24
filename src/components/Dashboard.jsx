@@ -8,7 +8,7 @@ const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'ass
 
 // Parte alta della Cartina: prossima interrogazione, tutte le tue, riepilogo delle materie.
 export default function Dashboard({ openPid, onToggle, renderOpen }) {
-  const { allGroups, programmate, mySid, today, nameOf, currentPid, incoming, isLive, subjectOf } = useData();
+  const { allGroups, programmate, mySid, today, nameOf, currentPid, incoming, isLive, subjectOf, groupLabel } = useData();
   const richieste = mySid ? incoming.filter(isLive) : [];
   const entries = mySid ? myEntries(allGroups, programmate, mySid, today) : [];
   const next = nextEntry(entries);
@@ -16,20 +16,6 @@ export default function Dashboard({ openPid, onToggle, renderOpen }) {
 
   return (
     <>
-      {richieste.length > 0 && (
-        <Link to="/scambi" className="richieste">
-          <span className="r-num">{richieste.length}</span>
-          <span className="r-txt">
-            <b>{richieste.length === 1 ? 'Hai una richiesta di scambio' : `Hai ${richieste.length} richieste di scambio`}</b>
-            <small>
-              {richieste.slice(0, 2).map((r) => `${nameOf(r.fromSid)}${subjectOf(r.fromGroup) ? ` (${subjectOf(r.fromGroup)})` : ''}`).join(', ')}
-              {richieste.length > 2 ? '…' : ''}
-            </small>
-          </span>
-          <span className="r-go">Rispondi →</span>
-        </Link>
-      )}
-
       {mySid && (
         <section className={`hero ${next?.days === 0 ? 'oggi' : ''}`}>
           {next ? (
@@ -57,6 +43,32 @@ export default function Dashboard({ openPid, onToggle, renderOpen }) {
               <div className="hero-meta"><span>{entries.length ? 'Non hai altre interrogazioni da fare.' : 'Non sei in nessun gruppo delle programmate.'}</span></div>
             </>
           )}
+        </section>
+      )}
+
+      {mySid && (
+        <section className="reqbox">
+          <header>
+            <b>Richieste di scambio</b>
+            <span className={`reqcount ${richieste.length ? 'on' : ''}`}>{richieste.length}</span>
+          </header>
+          <div className="reqlist">
+            {richieste.length === 0 ? (
+              <p className="reqempty">Non hai richieste di scambio.</p>
+            ) : (
+              richieste.map((r) => (
+                <Link key={r.id} to="/scambi" className="reqrow">
+                  <span className="rq-txt">
+                    <b>{nameOf(r.fromSid)}</b>
+                    <small>
+                      {subjectOf(r.fromGroup) ? `${subjectOf(r.fromGroup)} · ` : ''}{groupLabel(r.fromGroup)} ⇄ {groupLabel(r.toGroup)}
+                    </small>
+                  </span>
+                  <span className="r-go">Rispondi →</span>
+                </Link>
+              ))
+            )}
+          </div>
         </section>
       )}
 

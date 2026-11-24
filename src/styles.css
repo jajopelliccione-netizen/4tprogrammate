@@ -188,11 +188,6 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .materia-anchor + .titolo { margin-top: 26px; }
 .alertbox { background: #fff1f2; color: #9f1239; border: 1px solid #fda4af; border-radius: 16px; padding: 12px 14px; margin-bottom: 14px; font-size: .9rem; }
 
-.richieste { display: flex; align-items: center; gap: 12px; background: #fff7ed; color: #7c2d12; border: 1.5px solid #fdba74; border-radius: 18px; padding: 12px 14px; margin-bottom: 14px; text-decoration: none; box-shadow: 0 10px 24px -14px #f97316; animation: pop .3s ease; }
-.richieste .r-num { background: #f97316; color: #fff; font-weight: 800; min-width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; }
-.richieste .r-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; } .richieste small { color: #9a3412; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.richieste .r-go { font-weight: 800; font-size: .85rem; white-space: nowrap; }
-@media print { .richieste { display: none !important; } }
 .timeline li > div { flex: 1; min-width: 0; } .timeline .del { margin-left: auto; flex: none; min-height: 32px; width: 32px; padding: 0; }
 
 /* ---- programmate come box apribili ---- */
@@ -204,3 +199,15 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .aperta { animation: pop .25s ease; padding: 4px 0 8px; }
 .dategrp { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .gcard header .cleardate { background: #ffffffd9; color: #9f1239; border: 0; min-height: 28px; font-size: .75rem; }
+
+/* ---- box richieste di scambio: altezza fissa, scorre se sono tante ---- */
+.reqbox { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.reqbox header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 8px; }
+.reqcount { min-width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: .85rem; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.reqcount.on { background: #f97316; color: #fff; border-color: transparent; }
+.reqlist { height: 132px; overflow-y: auto; padding: 0 10px 10px; display: flex; flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch; }
+.reqempty { margin: auto; color: var(--muted); font-size: .92rem; }
+.reqrow { display: flex; align-items: center; gap: 10px; background: #fff7ed; color: #7c2d12; border: 1px solid #fdba74; border-radius: 14px; padding: 9px 12px; text-decoration: none; flex: none; }
+.reqrow .rq-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; } .reqrow small { color: #9a3412; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reqrow .r-go { font-weight: 800; font-size: .82rem; white-space: nowrap; }
+@media print { .reqbox { display: none !important; } }
