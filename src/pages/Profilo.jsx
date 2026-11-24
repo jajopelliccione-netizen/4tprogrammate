@@ -65,6 +65,7 @@ export default function Profilo() {
         <button className="primary" disabled={busy}>Salva password</button>
       </form>
       <button className="danger" onClick={logout}>Esci</button>
+      <p className="hint" style={{ textAlign: 'center', marginTop: 24 }}>Versione del sito: {__BUILD__}</p>
     </>
   );
 }
