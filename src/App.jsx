@@ -22,8 +22,10 @@ function Protected() {
   if (!profile) {
     return (
       <Splash>
-        <h2>Accesso non più valido</h2>
-        <p>Questo account non è (più) collegato a uno studente. Chiedi al rappresentante un nuovo link d'invito.</p>
+        <h2>Accesso non valido</h2>
+        <p>Sei entrato ({user.email ? 'account ' + (user.email.endsWith('studenti.4tssa.app') ? 'studente' : user.email) : 'account'}), ma questo account non ha i permessi.</p>
+        <p><b>Se sei l'admin:</b> in Firestore, raccolta <code>users</code>, deve esistere un documento con ID uguale a questo UID: <code>{user.uid}</code>, con campo <code>role</code> = <code>admin</code>. Controlla anche di aver pubblicato le regole.</p>
+        <p><b>Se sei uno studente:</b> chiedi al rappresentante un nuovo link d'invito.</p>
         <button onClick={logout}>Esci</button>
       </Splash>
     );

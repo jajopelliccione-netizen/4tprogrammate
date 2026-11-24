@@ -22,7 +22,7 @@ export default function Login() {
       .catch((e) => { setStudents([]); setErr(errMsg(e)); });
   }, []);
 
-  if (!loading && user && profile) return <Navigate to="/" replace />;
+  if (!loading && user) return <Navigate to="/" replace />;
 
   const active = (students || []).filter((s) => s.activated).sort((a, b) => a.name.localeCompare(b.name, 'it'));
 
