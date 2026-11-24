@@ -152,3 +152,53 @@ test('import: errori per nome sconosciuto, doppioni e troppi posti', () => {
   assert.ok(r.errors.some((e) => e.includes('già nel gruppo 1')));
   assert.ok(parseGroupsText('Gruppo 1: a,b,c,d,e,f', classe).errors.length > 0);
 });
+
+// ---- dashboard ----
+import { daysUntil, mySubstitutions, myEntries, nextEntry, progSummary, whenLabel } from '../src/lib/dashboard.js';
+
+test('dashboard: giorni mancanti e testo', () => {
+  assert.equal(daysUntil('2027-01-10', '2027-01-07'), 3);
+  assert.equal(daysUntil('2027-01-07', '2027-01-07'), 0);
+  assert.equal(daysUntil(null, '2027-01-07'), null);
+  assert.deepEqual(['2027-01-07', '2027-01-08', '2027-01-12', null].map((d) => whenLabel(daysUntil(d, '2027-01-07'))),
+    ['oggi', 'domani', 'tra 5 giorni', 'data da definire']);
+});
+
+test('dashboard: prossima interrogazione tra più materie, con chi, e sostituto', () => {
+  const progs = [{ id: 'it', subject: 'Italiano' }, { id: 'st', subject: 'Storia' }];
+  const g = (pid, n, seats, date, extra = {}) => ({ id: `${pid}_g0${n}`, ...emptyGroup(n, { pid, seats, date, ...extra }) });
+  const all = [
+    g('it', 1, ['me', 'a', 'b', 'c'], '2027-02-20'),
+    g('it', 2, ['d', 'e', 'f', 'h'], '2027-02-27'),
+    g('st', 1, ['x', 'y', 'z', 'k'], '2027-02-10'),
+    g('st', 2, ['me', 'q', 'r', ''], '2027-02-15'),
+  ];
+  const entries = myEntries(all, progs, 'me', '2027-02-08');
+  assert.equal(entries.length, 2);
+  const nxt = nextEntry(entries);
+  assert.equal(nxt.prog.subject, 'Storia');   // 15 feb viene prima di 20 feb
+  assert.equal(nxt.days, 7);
+  assert.deepEqual(nxt.mates, ['q', 'r']);
+  // sostituto: il 1° del gruppo successivo è 'x' per nessuno qui; 'd' è sostituto di it_g01
+  assert.equal(mySubstitutions(all, progs, 'd', '2027-02-08').length, 1);
+  // 'me' è il 1° di Storia gruppo 2 → è sostituto del gruppo 1 di Storia (ma non di un gruppo in cui è già dentro)
+  const meSub = mySubstitutions(all, progs, 'me', '2027-02-08');
+  assert.equal(meSub.length, 1);
+  assert.equal(meSub[0].prog.subject, 'Storia');
+  // fatta / passata → non è "prossima"
+  all[3].done = true;
+  assert.equal(nextEntry(myEntries(all, progs, 'me', '2027-02-08')).prog.subject, 'Italiano');
+});
+
+test('dashboard: riepilogo materia', () => {
+  const gs = [
+    { ...emptyGroup(1, { seats: ['a', 'b', 'c', 'd'], date: '2027-03-01' }), done: true },
+    emptyGroup(2, { seats: ['e', 'f', '', ''], date: '2027-03-09' }),
+    emptyGroup(3, { seats: ['g', '', '', ''], date: '2027-03-05' }),
+  ];
+  const s = progSummary(gs, '2027-03-02');
+  assert.equal(s.done, 1);
+  assert.equal(s.total, 3);
+  assert.equal(s.next.number, 3);
+  assert.equal(s.nextDays, 3);
+});

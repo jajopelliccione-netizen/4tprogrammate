@@ -5,16 +5,21 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import GroupCard from '../components/GroupCard';
 import Modal from '../components/Modal';
-import ProgrammataPicker from '../components/ProgrammataPicker';
+import Dashboard from '../components/Dashboard';
 import { formatDate } from '../lib/dates';
 import { createSwap, seatSwappable } from '../lib/swaps';
 import { errMsg } from '../hooks';
 
 export default function Cartina() {
   const { user, isAdmin } = useAuth();
-  const { subject, programmate, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
+  const { subject, programmate, setPid, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
   const toast = useToast();
   const gridRef = useRef(null);
+  const materiaRef = useRef(null);
+  const pick = (id) => {
+    setPid(id);
+    setTimeout(() => materiaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
   const [target, setTarget] = useState(null); // { group, pos }
   const [busy, setBusy] = useState(false);
 
@@ -66,21 +71,10 @@ export default function Cartina() {
 
   return (
     <>
-      <ProgrammataPicker />
-      <h2 className="titolo">Interrogazioni programmate{subject && <> · <b>{subject}</b></>} <small>· 4T SSA</small></h2>
-      {mySid && (
-        <div className="mybox">
-          {mySeat ? (
-            <>
-              <small>La tua interrogazione</small>
-              <b>Gruppo {myGroup.number} – {formatDate(myGroup.date, true)}</b>
-              {myGroup.date === today && <span className="pill oggi-pill">OGGI</span>}
-            </>
-          ) : (
-            <><small>La tua interrogazione</small><b>Non sei in nessun gruppo delle programmate</b></>
-          )}
-        </div>
-      )}
+      <Dashboard onPickProg={pick} />
+
+      <div ref={materiaRef} className="materia-anchor" />
+      <h2 className="titolo">Cartina{subject && <> · <b>{subject}</b></>} <small>· 4T SSA</small></h2>
       {mySid && mySeat && mySwappable && <p className="hint">Per chiedere uno scambio tocca il nome di un compagno (⇄).</p>}
 
       {groups.length === 0 ? (
