@@ -14,7 +14,7 @@ import { useMarking } from '../useMarking';
 import { errMsg } from '../hooks';
 
 export default function Cartina() {
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const {
     setPid, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming, nameOf,
   } = useData();
@@ -43,7 +43,7 @@ export default function Cartina() {
     if (!sid) return false;
     if (isAdmin) return true;
     if (!mySeat || !mySwappable || sid === mySid) return false;
-    return seatSwappable(g, i, today) && Boolean(studentsById[sid]?.uid);
+    return seatSwappable(g, i, today);
   };
   const onSeat = (group, pos) => (isAdmin ? setMark({ gid: group.id, pos }) : setTarget({ group, pos, sid: group.seats[pos] }));
 
@@ -54,8 +54,8 @@ export default function Cartina() {
     setBusy(true);
     try {
       await createSwap({
-        me: { uid: user.uid, sid: mySid },
-        other: { uid: studentsById[target.sid].uid, sid: target.sid },
+        meSid: mySid,
+        otherSid: target.sid,
         from: mySeat,
         to: { gid: target.group.id, pos: target.pos },
       });
@@ -142,7 +142,7 @@ export default function Cartina() {
           </>}>
           <p>Tu: <b>Gruppo {myGroup.number}</b> ({formatDate(myGroup.date)})<br />
             {studentsById[target.sid]?.name}: <b>Gruppo {target.group.number}</b> ({formatDate(target.group.date)})</p>
-          <p>Se accetta, vi scambiate i posti.</p>
+          <p>Se accetta, vi scambiate i posti.{!studentsById[target.sid]?.activated && ' Non ha ancora attivato l\'app: vedrà la richiesta appena entra.'}</p>
           {alreadyAsked && <p className="error">C'è già una richiesta in attesa con questo compagno.</p>}
         </Modal>
       )}

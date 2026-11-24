@@ -6,14 +6,12 @@ import { isFutureDay, seatSwappable, swapValidNow } from './swapRules';
 
 export { isFutureDay, seatSwappable, swapValidNow };
 
-export async function createSwap({ me, other, from, to }) {
-  // me: { uid, sid } – other: { uid, sid } – from/to: { gid, pos }
+export async function createSwap({ meSid, otherSid, from, to }) {
+  // from/to: { gid, pos }. Le richieste sono legate agli studenti, anche a chi non ha ancora attivato l'app.
   const ref = doc(collection(db, 'swaps'));
   await setDoc(ref, {
-    fromUid: me.uid,
-    toUid: other.uid,
-    fromSid: me.sid,
-    toSid: other.sid,
+    fromSid: meSid,
+    toSid: otherSid,
     fromGroup: from.gid,
     fromPos: from.pos,
     toGroup: to.gid,

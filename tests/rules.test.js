@@ -57,7 +57,7 @@ async function seed() {
 
 const as = (uid, email) => env.authenticatedContext(uid, email ? { email } : {}).firestore();
 const swapData = (over = {}) => ({
-  fromUid: UA, toUid: UB, fromSid: 'A', toSid: 'B',
+  fromSid: 'A', toSid: 'B',
   fromGroup: 'g01', fromPos: 0, toGroup: 'g02', toPos: 0,
   status: 'pending', createdAt: serverTimestamp(), ...over,
 });
@@ -176,13 +176,13 @@ test('l\'admin scrive gruppi, studenti, storico', async () => {
 test('A crea una richiesta valida; non può farla a nome di un altro', async () => {
   const a = as(UA);
   await assertSucceeds(setDoc(doc(a, 'swaps', 's1'), swapData()));
-  await assertFails(setDoc(doc(a, 'swaps', 's2'), swapData({ fromUid: UC, fromSid: 'C', fromGroup: 'g01', fromPos: 1 })));
+  await assertFails(setDoc(doc(a, 'swaps', 's2'), swapData({ fromSid: 'C', fromGroup: 'g01', fromPos: 1 })));
 });
 
 test('richiesta non valida: posto sbagliato, gruppo passato, interrogato, fatto', async () => {
   const a = as(UA);
   await assertFails(setDoc(doc(a, 'swaps', 's1'), swapData({ toPos: 2 }))); // posto vuoto
-  await assertFails(setDoc(doc(a, 'swaps', 's2'), swapData({ toSid: 'D', toUid: 'u', toGroup: 'g03', toPos: 0 }))); // data passata
+  await assertFails(setDoc(doc(a, 'swaps', 's2'), swapData({ toSid: 'D', toGroup: 'g03', toPos: 0 }))); // data passata
   await env.withSecurityRulesDisabled(async (ctx) => {
     await updateDoc(doc(ctx.firestore(), 'groups', 'g02'), { status: ['interrogato', 'attesa', 'attesa', 'attesa'] });
   });
@@ -194,6 +194,31 @@ test('richiesta con gruppo "oggi" (startsAt passato): rifiutata', async () => {
     await updateDoc(doc(ctx.firestore(), 'groups', 'g02'), { startsAt: past(), date: '2000-01-01' });
   });
   await assertFails(setDoc(doc(as(UA), 'swaps', 's1'), swapData()));
+});
+
+test('richiesta a uno studente che NON ha ancora attivato l\'app: la vede e risponde appena entra', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const adb = ctx.firestore();
+    await setDoc(doc(adb, 'groups', 'g04'), { number: 4, date: '2099-01-01', startsAt: future(),
+      seats: ['N', '', '', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false, pid: '' });
+  });
+  await assertSucceeds(setDoc(doc(as(UA), 'swaps', 'sn'), swapData({ toSid: 'N', toGroup: 'g04', toPos: 0 })));
+  // N si iscrive più tardi (simulato con rules disabled) e poi risponde
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const adb = ctx.firestore();
+    await setDoc(doc(adb, 'users', 'uidN'), { role: 'student', studentId: 'N', inviteToken: 'x' });
+    await updateDoc(doc(adb, 'students', 'N'), { activated: true, uid: 'uidN', authEmail: 'n@x.it' });
+  });
+  const n = as('uidN');
+  await assertSucceeds(getDoc(doc(n, 'swaps', 'sn')));
+  await assertFails(getDoc(doc(as(UC), 'swaps', 'sn')));
+  const b = writeBatch(n);
+  b.update(doc(n, 'swaps', 'sn'), { status: 'accepted', resolvedAt: serverTimestamp() });
+  b.update(doc(n, 'groups', 'g01'), { seats: ['N', 'C', '', ''], lastSwapId: 'sn' });
+  b.update(doc(n, 'groups', 'g04'), { seats: ['A', '', '', ''], lastSwapId: 'sn' });
+  b.set(doc(n, 'history', 'sn'), { type: 'swap', swapId: 'sn', at: serverTimestamp(), fromSid: 'A', toSid: 'N',
+    fromGroup: 'g01', fromPos: 0, toGroup: 'g04', toPos: 0 });
+  await assertSucceeds(b.commit());
 });
 
 test('solo i due interessati leggono lo scambio', async () => {
@@ -307,7 +332,7 @@ test('uno studente non può scrivere storico a mano', async () => {
 
 test('scambio dentro lo stesso gruppo', async () => {
   await assertSucceeds(setDoc(doc(as(UA), 'swaps', 's1'),
-    swapData({ toUid: UC, toSid: 'C', toGroup: 'g01', toPos: 1 })));
+    swapData({ toSid: 'C', toGroup: 'g01', toPos: 1 })));
   const db = as(UC);
   const b = writeBatch(db);
   b.update(doc(db, 'swaps', 's1'), { status: 'accepted', resolvedAt: serverTimestamp() });
@@ -331,7 +356,7 @@ test('gruppo da 5 persone: scambio sul 5° posto riuscito, e 5° posto non manom
   });
   // A (g01 pos0) chiede lo scambio con C (g05 pos4)
   await assertSucceeds(setDoc(doc(as(UA), 'swaps', 's5'),
-    swapData({ toUid: UC, toSid: 'C', toGroup: 'g05', toPos: 4 })));
+    swapData({ toSid: 'C', toGroup: 'g05', toPos: 4 })));
   const dbc = as(UC);
   const b = writeBatch(dbc);
   b.update(doc(dbc, 'swaps', 's5'), { status: 'accepted', resolvedAt: serverTimestamp() });

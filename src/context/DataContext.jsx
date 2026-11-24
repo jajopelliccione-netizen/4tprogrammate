@@ -38,14 +38,14 @@ export function DataProvider({ children }) {
       onSnapshot(collection(db, 'groups'), (s) => setGroups(s.docs.map(withId)), (e) => { console.error(e); setGroups([]); }),
       onSnapshot(query(collection(db, 'history'), orderBy('at', 'desc'), limit(300)), (s) => setHistory(s.docs.map(withId)), err),
     ];
-    if (!isAdmin) {
+    if (!isAdmin && profile?.studentId) {
       subs.push(
-        onSnapshot(query(collection(db, 'swaps'), where('toUid', '==', user.uid)), (s) => setIncoming(s.docs.map(withId).sort(byCreated)), err),
-        onSnapshot(query(collection(db, 'swaps'), where('fromUid', '==', user.uid)), (s) => setOutgoing(s.docs.map(withId).sort(byCreated)), err),
+        onSnapshot(query(collection(db, 'swaps'), where('toSid', '==', profile.studentId)), (s) => setIncoming(s.docs.map(withId).sort(byCreated)), err),
+        onSnapshot(query(collection(db, 'swaps'), where('fromSid', '==', profile.studentId)), (s) => setOutgoing(s.docs.map(withId).sort(byCreated)), err),
       );
     }
     return () => subs.forEach((u) => u());
-  }, [user.uid, isAdmin]);
+  }, [user.uid, isAdmin, profile?.studentId]);
 
   const allGroups = useMemo(() => sortGroups(groupsRaw || []), [groupsRaw]);
   const groupsById = useMemo(() => Object.fromEntries(allGroups.map((g) => [g.id, g])), [allGroups]);

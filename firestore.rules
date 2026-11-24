@@ -151,7 +151,7 @@ service cloud.firestore {
           && sw.status == 'pending'
           && getAfter(swapPath(d.lastSwapId)).data.status == 'accepted'
           // lo accetta il destinatario (che è chi sta scrivendo)
-          && sw.toUid == request.auth.uid
+          && sw.toSid == profile().studentId
           && (gid == sw.fromGroup || gid == sw.toGroup)
           // i posti sono ancora quelli della richiesta e non ancora interrogati
           && (gid != sw.fromGroup || (old.seats[sw.fromPos] == sw.fromSid && old.status[sw.fromPos] == 'attesa'))
@@ -172,8 +172,10 @@ service cloud.firestore {
 
     // ------------------------------------------------------------------- swaps --
     match /swaps/{id} {
+      // Le richieste sono legate agli STUDENTI (non agli account): si possono mandare anche a chi
+      // non ha ancora attivato l'app; le vedrà (e potrà rispondere) appena entra.
       allow read: if isAdmin()
-        || (isStudent() && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid));
+        || (isStudent() && (resource.data.fromSid == profile().studentId || resource.data.toSid == profile().studentId));
 
       // Creazione: la fa chi chiede lo scambio, con posti reali, in attesa, futuri.
       allow create: if isStudent() && validNewSwap(request.resource.data);
@@ -196,16 +198,14 @@ service cloud.firestore {
       }
 
       function validNewSwap(d) {
-        return d.keys().hasOnly(['fromUid', 'toUid', 'fromSid', 'toSid', 'fromGroup', 'fromPos',
+        return d.keys().hasOnly(['fromSid', 'toSid', 'fromGroup', 'fromPos',
                                  'toGroup', 'toPos', 'status', 'createdAt', 'resolvedAt'])
-          && d.keys().hasAll(['fromUid', 'toUid', 'fromSid', 'toSid', 'fromGroup', 'fromPos',
+          && d.keys().hasAll(['fromSid', 'toSid', 'fromGroup', 'fromPos',
                               'toGroup', 'toPos', 'status', 'createdAt'])
           && d.status == 'pending'
-          && d.fromUid == request.auth.uid
           && d.fromSid == profile().studentId
           && d.toSid is string && d.toSid != d.fromSid
-          && d.toUid is string
-          && get(studentPath(d.toSid)).data.uid == d.toUid
+          && exists(studentPath(d.toSid))
           && d.fromGroup is string && d.toGroup is string
           && d.fromPos is int && d.toPos is int
           && d.fromPos >= 0 && d.fromPos < 5 && d.toPos >= 0 && d.toPos < 5
@@ -216,22 +216,22 @@ service cloud.firestore {
       function studentSwapUpdate() {
         let old = resource.data;
         let nw = request.resource.data;
-        let me = request.auth.uid;
+        let me = profile().studentId;
         return isStudent()
           && old.status == 'pending'
           && nw.diff(old).affectedKeys().hasOnly(['status', 'resolvedAt'])
           && nw.resolvedAt == request.time
           && (
             // il destinatario ACCETTA: valido solo se i gruppi sono scambiati nello stesso batch
-            (old.toUid == me && nw.status == 'accepted' && swapValid(old)
+            (old.toSid == me && nw.status == 'accepted' && swapValid(old)
               && getAfter(groupPath(old.fromGroup)).data.seats[old.fromPos] == old.toSid
               && getAfter(groupPath(old.toGroup)).data.seats[old.toPos] == old.fromSid)
             // il destinatario RIFIUTA
-            || (old.toUid == me && nw.status == 'rejected')
+            || (old.toSid == me && nw.status == 'rejected')
             // chi ha chiesto ANNULLA
-            || (old.fromUid == me && nw.status == 'cancelled')
+            || (old.fromSid == me && nw.status == 'cancelled')
             // uno dei due segna come DECADUTA una richiesta non più applicabile
-            || ((old.fromUid == me || old.toUid == me) && nw.status == 'expired' && !swapValid(old))
+            || ((old.fromSid == me || old.toSid == me) && nw.status == 'expired' && !swapValid(old))
           );
       }
     }
@@ -264,7 +264,7 @@ service cloud.firestore {
           && d.at == request.time
           && before.status == 'pending'
           && after.status == 'accepted'
-          && before.toUid == request.auth.uid
+          && before.toSid == profile().studentId
           && d.fromSid == before.fromSid && d.toSid == before.toSid
           && d.fromGroup == before.fromGroup && d.fromPos == before.fromPos
           && d.toGroup == before.toGroup && d.toPos == before.toPos;

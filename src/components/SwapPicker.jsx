@@ -20,7 +20,7 @@ export default function SwapPicker({ pid, onPick, onClose }) {
   if (canSwap) {
     for (const g of groups) {
       g.seats.forEach((sid, pos) => {
-        if (sid && sid !== mySid && seatSwappable(g, pos, today) && studentsById[sid]?.uid) options.push({ g, pos, sid });
+        if (sid && sid !== mySid && seatSwappable(g, pos, today)) options.push({ g, pos, sid });
       });
     }
   }
@@ -41,7 +41,7 @@ export default function SwapPicker({ pid, onPick, onClose }) {
               <li key={`${g.id}-${pos}`}>
                 <button disabled={asked(sid)} onClick={() => onPick({ group: g, pos, sid })}>
                   <b>{studentsById[sid].name}</b>
-                  <small>Gruppo {g.number} · {formatDate(g.date)}{asked(sid) ? ' · richiesta già in attesa' : ''}</small>
+                  <small>Gruppo {g.number} · {formatDate(g.date)}{asked(sid) ? ' · richiesta già in attesa' : ''}{!studentsById[sid].activated ? ' · non ha ancora attivato l\'app' : ''}</small>
                 </button>
               </li>
             ))}
