@@ -14,6 +14,8 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
   const entries = mySid ? myEntries(allGroups, programmate, mySid, today) : [];
   const next = nextEntry(entries);
   const subs = mySid ? mySubstitutions(allGroups, programmate, mySid, today) : [];
+  // programmata per cui chiedere lo scambio: quella della prossima interrogazione, altrimenti la prima in cui sono
+  const swapPid = (next || entries[0])?.prog.id;
 
   return (
     <>
@@ -30,14 +32,13 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                 <b>Gruppo {next.group.number}</b>
                 {next.group.date && <span>{formatDate(next.group.date, true)}</span>}
               </div>
-              <div className="hero-with">
-                <small>Con</small>
+              {next.mates.length > 0 && (
                 <div className="mates">
-                  {next.mates.length ? next.mates.map((s) => <span key={s} className="mate">{nameOf(s)}</span>) : <span className="mate">nessun altro</span>}
+                  {next.mates.map((s) => <span key={s} className="mate">{nameOf(s)}</span>)}
                 </div>
-              </div>
-              {onSwap && next.upcoming && (
-                <button className="hero-btn" onClick={() => onSwap(next.prog.id)}>🔄 Chiedi uno scambio</button>
+              )}
+              {subs.length > 0 && (
+                <p className="hero-note">Sei anche sostituto: {subs[0].prog.subject}, Gruppo {subs[0].group.number}{subs[0].days !== null ? ` (${whenLabel(subs[0].days)})` : ''}</p>
               )}
             </>
           ) : (
@@ -53,12 +54,14 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
       {mySid && (
         <section className="reqbox">
           <header>
-            <b>Richieste di scambio</b>
-            <span className={`reqcount ${richieste.length ? 'on' : ''}`}>{richieste.length}</span>
+            <b>Scambi{richieste.length > 0 && <span className="reqcount on">{richieste.length}</span>}</b>
+            {onSwap && swapPid !== undefined && (
+              <button className="small primary" onClick={() => onSwap(swapPid)}>🔄 Chiedi scambio</button>
+            )}
           </header>
           <div className="reqlist">
             {richieste.length === 0 ? (
-              <p className="reqempty">Non hai richieste di scambio.</p>
+              <p className="reqempty">Nessuna richiesta ricevuta.</p>
             ) : (
               richieste.map((r) => (
                 <Link key={r.id} to="/scambi" className="reqrow">
@@ -74,15 +77,6 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
             )}
           </div>
         </section>
-      )}
-
-      {subs.length > 0 && (
-        <div className="subbox">
-          <b>Sei sostituto</b>
-          {subs.slice(0, 3).map((s) => (
-            <span key={s.group.id}>{s.prog.subject} · Gruppo {s.group.number} ({whenLabel(s.days)})</span>
-          ))}
-        </div>
       )}
 
       <h2>Le programmate</h2>

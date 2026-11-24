@@ -264,3 +264,14 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .sw-arrow { align-self: center; font-size: 1.4rem; color: var(--brand); font-weight: 800; }
 .sw-help { color: var(--muted); }
 .swcard .row { margin: 0; } .swcard .row button { flex: 1; }
+
+/* ---- Home più semplice ---- */
+.hero { padding: 16px 18px; gap: 0; margin-bottom: 12px; }
+.hero .mates { margin-top: 12px; } .hero-with { display: none; }
+.hero-note { margin: 12px 0 0; font-size: .82rem; opacity: .92; border-top: 1px solid #ffffff3a; padding-top: 10px; }
+.reqbox { margin-bottom: 12px; box-shadow: none; }
+.reqbox header { padding: 10px 12px 6px 16px; } .reqbox header b { display: flex; align-items: center; gap: 8px; font-size: .98rem; }
+.reqbox header .reqcount { min-width: 22px; height: 22px; font-size: .75rem; }
+.reqlist { height: auto; max-height: 128px; min-height: 0; padding: 0 12px 12px; }
+.reqempty { margin: 0; padding: 0 4px 2px; text-align: left; color: var(--muted); font-size: .88rem; }
+.main h2 { margin-top: 1.1rem; font-size: 1.05rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .78rem; }
