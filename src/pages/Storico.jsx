@@ -4,7 +4,8 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import { deleteHistoryEntries, deleteHistoryEntry } from '../lib/admin';
 import { errMsg } from '../hooks';
-import { entryText, typeIcon } from '../lib/history';
+import { entryText } from '../lib/history';
+import Icon, { HISTORY_ICON } from '../components/Icon';
 import { formatDateTime } from '../lib/dates';
 
 export default function Storico() {
@@ -45,14 +46,14 @@ export default function Storico() {
       )}
       {isAdmin && list.length > 0 && (
         <button className="danger small" disabled={busy} onClick={removeAll}>
-          🗑️ Elimina {filter === 'tutte' ? 'tutto lo storico' : `lo storico di ${filter}`}
+          <Icon n="trash" size={16} /> Elimina {filter === 'tutte' ? 'tutto lo storico' : `lo storico di ${filter}`}
         </button>
       )}
       {list.length === 0 && <p className="muted">Ancora nessun evento.</p>}
       <ul className="timeline">
         {list.map((e) => (
           <li key={e.id} className={e.undone ? 'undone' : ''}>
-            <span className="ico">{typeIcon(e.type)}</span>
+            <span className="ico"><Icon n={HISTORY_ICON[e.type] || 'star'} size={16} /></span>
             <div>
               <p>{entryText(e, nameOf, groupLabel)}{e.undone && ' (annullato)'}</p>
               <small>{subjOf(e) && `${subjOf(e)} · `}{formatDateTime(e.at)}</small>

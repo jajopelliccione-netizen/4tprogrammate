@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import { errMsg } from '../hooks';
+import Icon from '../components/Icon';
 
 export default function Profilo() {
   const { user, isAdmin, logout } = useAuth();
@@ -45,8 +46,8 @@ export default function Profilo() {
       <div className="panel flat">
         <h3>Aspetto</h3>
         <div className="seg" style={{ margin: '10px 0 0' }}>
-          {[['light', '☀️ Chiaro'], ['dark', '🌙 Scuro'], ['auto', 'Automatico']].map(([k, l]) => (
-            <button key={k} type="button" className={tema === k ? 'on' : ''} onClick={() => cambiaTema(k)}>{l}</button>
+          {[['light', 'sun', 'Chiaro'], ['dark', 'moon', 'Scuro'], ['auto', 'settings', 'Auto']].map(([k, ic, l]) => (
+            <button key={k} type="button" className={tema === k ? 'on' : ''} onClick={() => cambiaTema(k)}><Icon n={ic} size={16} /> {l}</button>
           ))}
         </div>
       </div>

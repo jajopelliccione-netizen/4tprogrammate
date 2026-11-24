@@ -8,6 +8,7 @@ import Modal from '../components/Modal';
 import Dashboard from '../components/Dashboard';
 import SwapPicker from '../components/SwapPicker';
 import SubBlock from '../components/SubBlock';
+import Icon from '../components/Icon';
 import { formatDate } from '../lib/dates';
 import { ABSENT, DONE, WAIT } from '../lib/groups';
 import { createSwap, seatSwappable } from '../lib/swaps';
@@ -108,7 +109,7 @@ export default function Cartina() {
   const gruppi = (
     <div className="aperta">
       {mySid && mySeat && (
-        <button className="primary bigact" onClick={() => askSwap(openPid)}>🔄 Chiedi uno scambio</button>
+        <button className="primary bigact" onClick={() => askSwap(openPid)}><Icon n="swap" /> Chiedi uno scambio</button>
       )}
       {isAdmin && <p className="hint">Tocca un nome per segnarlo <b>interrogato</b> o <b>assente</b>.</p>}
       {groups.length === 0 ? (
@@ -119,14 +120,14 @@ export default function Cartina() {
             <GroupCard key={g.id} group={g} groups={groups} studentsById={studentsById} today={today}
               mySid={mySid} canTap={canTap} onSeat={onSeat}
               footerExtra={isAdmin && !g.done && (
-                <button className="small primary no-print" disabled={busy} onClick={() => doGroupDone(g.id)}>✅ Gruppo interrogato</button>
+                <button className="small primary no-print" disabled={busy} onClick={() => doGroupDone(g.id)}><Icon n="check" size={16} /> Gruppo interrogato</button>
               )} />
           ))}
         </div>
       )}
       <div className="row no-print">
-        <button onClick={download}>⬇️ Scarica immagine</button>
-        <button onClick={() => window.print()}>🖨️ Stampa / PDF</button>
+        <button onClick={download}><Icon n="download" /> Scarica immagine</button>
+        <button onClick={() => window.print()}><Icon n="print" /> Stampa / PDF</button>
       </div>
     </div>
   );
@@ -160,10 +161,10 @@ export default function Cartina() {
           actions={<button onClick={() => setMark(null)}>Chiudi</button>}>
           <p className="hint">Gruppo {markGroup.number} · {formatDate(markGroup.date)} · ora: <b>{markStatus}</b></p>
           <div className="markbtns">
-            <button className="primary" disabled={busy || markStatus === DONE} onClick={() => doMark(DONE)}>✅ Interrogato</button>
-            <button disabled={busy || markStatus === ABSENT} onClick={() => doMark(ABSENT)}>🚫 Assente</button>
+            <button className="primary" disabled={busy || markStatus === DONE} onClick={() => doMark(DONE)}><Icon n="check" /> Interrogato</button>
+            <button disabled={busy || markStatus === ABSENT} onClick={() => doMark(ABSENT)}><Icon n="ban" /> Assente</button>
             {markStatus !== ABSENT && <p className="markinfo">{absencePreview(mark.gid, mark.pos)}</p>}
-            <button disabled={busy || markStatus === WAIT} onClick={() => doMark(WAIT)}>↩️ In attesa</button>
+            <button disabled={busy || markStatus === WAIT} onClick={() => doMark(WAIT)}><Icon n="undo" /> In attesa</button>
           </div>
         </Modal>
       )}

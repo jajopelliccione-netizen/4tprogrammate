@@ -5,6 +5,7 @@ import { formatDate } from '../lib/dates';
 import { WAIT, pidOf } from '../lib/groups';
 import { colorOf } from './GroupCard';
 import SubTransfer from './SubTransfer';
+import Icon from './Icon';
 import { myEntries, mySubstitutions, nextEntry, progSummary, whenLabel } from '../lib/dashboard';
 
 const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'assente' };
@@ -50,7 +51,7 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
           ) : (
             <>
               <small>La tua prossima interrogazione</small>
-              <div className="hero-top"><span className="hero-mat">{entries.length ? 'Tutto fatto 🎉' : 'Nessuna in programma'}</span></div>
+              <div className="hero-top"><span className="hero-mat">{entries.length ? 'Tutto fatto' : 'Nessuna in programma'}</span></div>
               <div className="hero-meta"><span>{entries.length ? 'Non hai altre interrogazioni da fare.' : 'Non sei in nessun gruppo delle programmate.'}</span></div>
             </>
           )}
@@ -62,7 +63,7 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
           <header>
             <b>Scambi{richieste.length > 0 && <span className="reqcount on">{richieste.length}</span>}</b>
             {onSwap && swapPid !== undefined && (
-              <button className="small primary" onClick={() => onSwap(swapPid)}>🔄 Chiedi scambio</button>
+              <button className="small primary" onClick={() => onSwap(swapPid)}><Icon n="swap" size={16} /> Chiedi scambio</button>
             )}
           </header>
           <div className="reqlist">
@@ -74,7 +75,7 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                   <span className="rq-txt">
                     <b>{nameOf(r.fromSid)}</b>
                     <small>
-                      {subjectOf(r.fromGroup) ? `${subjectOf(r.fromGroup)} · ` : ''}{groupLabel(r.fromGroup)} ⇄ {groupLabel(r.toGroup)}
+                      {subjectOf(r.fromGroup) ? `${subjectOf(r.fromGroup)} · ` : ''}{groupLabel(r.fromGroup)} ↔ {groupLabel(r.toGroup)}
                     </small>
                   </span>
                   <span className="r-go">Rispondi →</span>
@@ -98,7 +99,7 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
               <button className={`matcard ${open ? 'on' : ''} ${mySid && !mine ? 'light' : ''}`} aria-expanded={open} onClick={() => onToggle(p.id)}>
                 <span className="mc-head">
                   <span className="mc-title">{p.subject}</span>
-                  <span className="mc-chev">{open ? '▲' : '▼'}</span>
+                  <span className={`mc-chev ${open ? 'up' : ''}`}><Icon n="chevron" size={18} /></span>
                 </span>
                 {sum.next ? (
                   <span className={`cg ${colorOf(sum.next.number)}`}>

@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import { createProgrammata } from '../lib/admin';
 import { errMsg } from '../hooks';
+import Icon from './Icon';
 
 // Schede per scegliere la programmata (materia). Per l'admin c'è anche "+ Nuova".
 export default function ProgrammataPicker({ admin = false }) {
@@ -36,7 +37,7 @@ export default function ProgrammataPicker({ admin = false }) {
         {programmate.map((p) => (
           <button key={p.id || 'x'} className={p.id === currentPid ? 'on' : ''} onClick={() => setPid(p.id)}>{p.subject}</button>
         ))}
-        {admin && <button className="plus" onClick={() => setAdding(!adding)}>+ Nuova</button>}
+        {admin && <button className="plus" onClick={() => setAdding(!adding)}><Icon n="plus" size={16} /> Nuova</button>}
       </div>
       {admin && adding && (
         <form className="row" onSubmit={create}>

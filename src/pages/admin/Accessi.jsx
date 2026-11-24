@@ -50,7 +50,7 @@ export default function Accessi() {
       <h2>Studenti <small>({activated}/{students.length} attivi)</small></h2>
       {pending.length > 0 && (
         <button onClick={() => copy(pending.map((s) => `${s.name} → ${inviteLink(openInvite[s.id].id)}`).join('\n'),
-          `Copiati ${pending.length} link`)}>📋 Copia tutti i link ({pending.length})</button>
+          `Copiati ${pending.length} link`)}>Copia tutti i link ({pending.length})</button>
       )}
       <ul className="rows">
         {students.map((s) => {

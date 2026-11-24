@@ -1,5 +1,6 @@
 import { formatDate } from '../lib/dates';
 import { ABSENT, DONE, subOf } from '../lib/groups';
+import Icon from './Icon';
 
 const COLORS = ['arancione', 'blu', 'verde', 'viola', 'giallo', 'rosa'];
 export const colorOf = (n) => COLORS[(n - 1 + COLORS.length * 10) % COLORS.length];
@@ -32,10 +33,10 @@ export default function GroupCard({ group, groups, studentsById, today, mySid, o
           return (
             <li key={i} className={`seat ${mine ? 'mia' : ''} ${st === DONE ? 'ok' : ''} ${st === ABSENT ? 'ass' : ''}`}>
               <Tag className="seat-in" {...(tappable ? { type: 'button', onClick: () => onSeat(group, i) } : {})}>
-                <span className="box">{st === DONE ? '✓' : st === ABSENT ? '✗' : ''}</span>
+                <span className="box">{st === DONE ? <Icon n="check" size={14} /> : st === ABSENT ? <Icon n="x" size={14} /> : null}</span>
                 <span className="nome">{s?.name || '(?)'}</span>
                 {mine && <span className="tu">tu</span>}
-                {tappable && <span className="swap-ico">⇄</span>}
+                {tappable && <span className="swap-ico"><Icon n="swap" size={14} /></span>}
               </Tag>
             </li>
           );

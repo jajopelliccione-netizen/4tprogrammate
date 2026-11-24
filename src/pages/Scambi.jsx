@@ -8,6 +8,7 @@ import { colorOf } from '../components/GroupCard';
 import SubBlock, { SubBlockText } from '../components/SubBlock';
 import { formatDate } from '../lib/dates';
 import { errMsg } from '../hooks';
+import Icon from '../components/Icon';
 
 const LABEL = {
   pending: 'In attesa', accepted: 'Accettata', rejected: 'Rifiutata',
@@ -70,7 +71,7 @@ export default function Scambi() {
         </p>
         <div className="sw-sides">
           <Side who="Tu" gid={mine.gid} group={groupsById[mine.gid]} groupLabel={groupLabel} />
-          <span className="sw-arrow">⇄</span>
+          <span className="sw-arrow"><Icon n="swap" size={22} /></span>
           <Side who={nameOf(otherSid)} gid={theirs.gid} group={groupsById[theirs.gid]} groupLabel={groupLabel} />
         </div>
         {!old && <small className="sw-help">{iAmSender ? 'Aspetta che risponda.' : 'Se accetti, i vostri posti si scambiano.'}</small>}

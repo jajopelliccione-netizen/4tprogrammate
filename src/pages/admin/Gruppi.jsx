@@ -12,6 +12,7 @@ import { colorOf } from '../../components/GroupCard';
 import { MAX_SEATS, SEATS, WAIT, distribute, finalize, moveStudent, shuffled, subOf } from '../../lib/groups';
 import { addDays } from '../../lib/dates';
 import { errMsg } from '../../hooks';
+import Icon from '../../components/Icon';
 
 function Chip({ s, picked, onPick }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `stu:${s.id}` });
@@ -186,7 +187,7 @@ export default function Gruppi() {
                   <input type="date" value={g.date || ''} onChange={(e) => run(() => setGroupDate(g.id, e.target.value))} />
                   {g.date && (
                     <button type="button" className="small cleardate" disabled={busy} aria-label="Togli la data" title="Togli la data"
-                      onClick={() => run(() => setGroupDate(g.id, ''))}>✕</button>
+                      onClick={() => run(() => setGroupDate(g.id, ''))}><Icon n="x" size={16} /></button>
                   )}
                 </span>
               </header>
@@ -232,7 +233,7 @@ export default function Gruppi() {
       {pool.some((s) => s.excluded) && <p className="hint">I nomi sbarrati sono esclusi dalle programmate.</p>}
 
       <details className="sec">
-        <summary>🎲 Distribuisci automaticamente</summary>
+        <summary><span><Icon n="shuffle" /> Distribuisci automaticamente</span></summary>
         <label>Numero di gruppi
           <input type="number" min="1" max="30" value={nGroups} onChange={(e) => setNGroups(e.target.value)} />
         </label>
@@ -243,7 +244,7 @@ export default function Gruppi() {
       </details>
 
       <details className="sec">
-        <summary>📥 Importa gruppi da testo</summary>
+        <summary><span><Icon n="inbox" /> Importa gruppi da testo</span></summary>
         <p className="hint">Una riga per gruppo, cognomi separati da virgola, sostituto dopo "|":<br />
           <code>Gruppo 1: Tasmi, Sciumè, Perricone, Maino | Sostituto: Guzzardi</code><br />
           Si possono scrivere fino a 5 nomi per gruppo.</p>
@@ -252,7 +253,7 @@ export default function Gruppi() {
       </details>
 
       <details className="sec">
-        <summary>📅 Date a cadenza</summary>
+        <summary><span><Icon n="calendar" /> Date a cadenza</span></summary>
         <label>Prima data<input type="date" value={start} onChange={(e) => setStart(e.target.value)} /></label>
         <label>Ogni quanti giorni<input type="number" min="1" value={step} onChange={(e) => setStep(e.target.value)} /></label>
         <button disabled={busy || !start || !groups.length} onClick={applyDates}>Imposta le date</button>
@@ -264,7 +265,7 @@ export default function Gruppi() {
       </details>
 
       <details className="sec">
-        <summary>⚙️ Programmata: nome ed eliminazione</summary>
+        <summary><span><Icon n="settings" /> Programmata: nome ed eliminazione</span></summary>
         {!currentProg.virtual && (
           <>
             <label>Materia

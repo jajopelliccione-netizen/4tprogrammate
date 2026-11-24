@@ -6,6 +6,7 @@ import { useMarking } from '../../useMarking';
 import { ABSENT, DONE, WAIT, subOf } from '../../lib/groups';
 import { entryText } from '../../lib/history';
 import { formatDate } from '../../lib/dates';
+import Icon from '../../components/Icon';
 import { errMsg } from '../../hooks';
 
 export default function Segna() {
@@ -50,9 +51,9 @@ export default function Segna() {
           <li key={i} className="srow">
             <div className="sname"><b>{nameOf(sid)}</b><span className={`pill st-${g.status[i]}`}>{g.status[i]}</span></div>
             <div className="trio">
-              <button className="primary" disabled={busy || g.status[i] === DONE} onClick={() => setSt(i, DONE)}>✓ Interrogato</button>
-              <button disabled={busy || g.status[i] === ABSENT} onClick={() => setSt(i, ABSENT)}>✗ Assente</button>
-              <button disabled={busy || g.status[i] === WAIT} onClick={() => setSt(i, WAIT)}>↩ Attesa</button>
+              <button className="primary" disabled={busy || g.status[i] === DONE} onClick={() => setSt(i, DONE)}><Icon n="check" size={16} /> Interrogato</button>
+              <button disabled={busy || g.status[i] === ABSENT} onClick={() => setSt(i, ABSENT)}><Icon n="ban" size={16} /> Assente</button>
+              <button disabled={busy || g.status[i] === WAIT} onClick={() => setSt(i, WAIT)}><Icon n="undo" size={16} /> Attesa</button>
             </div>
           </li>
         ))}
@@ -61,7 +62,7 @@ export default function Segna() {
       <button disabled={busy || g.done} onClick={() => act(() => groupDone(gid))}>Segna tutto il gruppo come interrogato</button>
 
       <div className="undo">
-        <button className="danger" disabled={busy || !lastUndoable} onClick={() => undo(lastUndoable)}>↩️ Annulla ultima azione</button>
+        <button className="danger" disabled={busy || !lastUndoable} onClick={() => undo(lastUndoable)}><Icon n="undo" /> Annulla ultima azione</button>
         {lastUndoable && <small>{entryText(lastUndoable, nameOf, groupLabel)}</small>}
       </div>
     </>
