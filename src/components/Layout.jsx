@@ -12,12 +12,20 @@ const I = {
 const Icon = ({ n }) => <svg viewBox="0 0 24 24" aria-hidden="true">{I[n]}</svg>;
 
 export default function Layout() {
-  const { badge } = useData();
+  const { badge, rulesError } = useData();
   const { isAdmin } = useAuth();
   return (
     <div className="app">
       <header className="topbar"><span className="logo">4T</span>Interrogazioni 4T SSA</header>
-      <main className="main"><Outlet /></main>
+      <main className="main">
+        {rulesError && (
+          <div className="alertbox">
+            <b>Regole di Firestore non aggiornate.</b> Apri la console Firebase → Firestore → Regole, incolla le regole
+            più recenti (file <code>firestore.rules</code>) e premi Pubblica. Poi ricarica la pagina.
+          </div>
+        )}
+        <Outlet />
+      </main>
       <nav className="tabbar">
         <NavLink to="/" end><span className="ic"><Icon n="map" /></span>Cartina</NavLink>
         {!isAdmin && (

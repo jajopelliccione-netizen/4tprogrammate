@@ -20,6 +20,7 @@ export function DataProvider({ children }) {
   const [groupsRaw, setGroups] = useState(null);
   const [history, setHistory] = useState([]);
   const [programmateRaw, setProgrammate] = useState(null);
+  const [rulesError, setRulesError] = useState(false);
   const [pidSel, setPidSel] = useState(() => { try { return sessionStorage.getItem('pid'); } catch { return null; } });
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
@@ -28,8 +29,13 @@ export function DataProvider({ children }) {
     const err = (e) => console.error(e);
     const subs = [
       onSnapshot(collection(db, 'students'), (s) => setStudents(s.docs.map(withId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))), err),
-      onSnapshot(collection(db, 'programmate'), (s) => setProgrammate(s.docs.map(withId)), err),
-      onSnapshot(collection(db, 'groups'), (s) => setGroups(s.docs.map(withId)), err),
+      onSnapshot(collection(db, 'programmate'), (s) => { setProgrammate(s.docs.map(withId)); setRulesError(false); }, (e) => {
+        // di solito: regole di Firestore non ancora aggiornate. Non blocchiamo l'app.
+        console.error(e);
+        setProgrammate([]);
+        setRulesError(true);
+      }),
+      onSnapshot(collection(db, 'groups'), (s) => setGroups(s.docs.map(withId)), (e) => { console.error(e); setGroups([]); }),
       onSnapshot(query(collection(db, 'history'), orderBy('at', 'desc'), limit(300)), (s) => setHistory(s.docs.map(withId)), err),
     ];
     if (!isAdmin) {
@@ -94,7 +100,7 @@ export function DataProvider({ children }) {
   const value = {
     today, subject: currentProg?.subject || '', programmate, currentPid, currentProg, setPid, allGroups, groupLabel, subjectOf,
     students, studentsById, nameOf, groups, groupsById, groupsLoaded: groupsRaw !== null && programmateRaw !== null, history,
-    mySid, mySeat, incoming, outgoing, isLive, badge: pendingIncoming.length,
+    rulesError, mySid, mySeat, incoming, outgoing, isLive, badge: pendingIncoming.length,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

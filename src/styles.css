@@ -175,3 +175,4 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .materia-anchor { scroll-margin-top: 70px; }
 @media print { .hero, .subbox, .mine-list, .materie, .materia-anchor, h2:not(.titolo) { display: none !important; } }
 .materia-anchor + .titolo { margin-top: 26px; }
+.alertbox { background: #fff1f2; color: #9f1239; border: 1px solid #fda4af; border-radius: 16px; padding: 12px 14px; margin-bottom: 14px; font-size: .9rem; }
