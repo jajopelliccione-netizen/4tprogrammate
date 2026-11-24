@@ -187,3 +187,9 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 @media print { .hero, .subbox, .mine-list, .materie, .materia-anchor, h2:not(.titolo) { display: none !important; } }
 .materia-anchor + .titolo { margin-top: 26px; }
 .alertbox { background: #fff1f2; color: #9f1239; border: 1px solid #fda4af; border-radius: 16px; padding: 12px 14px; margin-bottom: 14px; font-size: .9rem; }
+
+.richieste { display: flex; align-items: center; gap: 12px; background: #fff7ed; color: #7c2d12; border: 1.5px solid #fdba74; border-radius: 18px; padding: 12px 14px; margin-bottom: 14px; text-decoration: none; box-shadow: 0 10px 24px -14px #f97316; animation: pop .3s ease; }
+.richieste .r-num { background: #f97316; color: #fff; font-weight: 800; min-width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.richieste .r-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; } .richieste small { color: #9a3412; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.richieste .r-go { font-weight: 800; font-size: .85rem; white-space: nowrap; }
+@media print { .richieste { display: none !important; } }
