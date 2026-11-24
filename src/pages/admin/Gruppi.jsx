@@ -178,7 +178,13 @@ export default function Gruppi() {
             <section key={g.id} className={`gcard ${colorOf(g.number)}`}>
               <header>
                 <h3>Gruppo {g.number}</h3>
-                <input type="date" value={g.date || ''} onChange={(e) => run(() => setGroupDate(g.id, e.target.value))} />
+                <span className="dategrp">
+                  <input type="date" value={g.date || ''} onChange={(e) => run(() => setGroupDate(g.id, e.target.value))} />
+                  {g.date && (
+                    <button type="button" className="small cleardate" disabled={busy} aria-label="Togli la data"
+                      onClick={() => run(() => setGroupDate(g.id, ''))}>✕ Togli data</button>
+                  )}
+                </span>
               </header>
               <ul>
                 {g.seats.map((sid, i) => (
@@ -246,6 +252,11 @@ export default function Gruppi() {
         <label>Prima data<input type="date" value={start} onChange={(e) => setStart(e.target.value)} /></label>
         <label>Ogni quanti giorni<input type="number" min="1" value={step} onChange={(e) => setStep(e.target.value)} /></label>
         <button disabled={busy || !start || !groups.length} onClick={applyDates}>Imposta le date</button>
+        <button className="danger" disabled={busy || !groups.some((g) => g.date)} onClick={() => {
+          if (confirm(`Togliere la data a tutti i gruppi di "${currentProg.subject}"?`)) {
+            run(async () => { await setGroupDates(groups, groups.map(() => null)); toast('Date tolte.'); });
+          }
+        }}>Togli tutte le date</button>
       </details>
 
       <details className="sec">

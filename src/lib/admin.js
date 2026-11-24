@@ -57,7 +57,8 @@ export const setGroupSub = (gid, subId) => updateDoc(doc(db, 'groups', gid), { s
 export async function setGroupDates(groups, dates) {
   const batch = writeBatch(db);
   groups.forEach((g, i) => {
-    if (dates[i]) batch.update(doc(db, 'groups', g.id), { date: dates[i], startsAt: startsAtOf(dates[i]) });
+    // dates[i] === null → toglie la data; undefined → lascia com'è
+    if (dates[i] !== undefined) batch.update(doc(db, 'groups', g.id), { date: dates[i] || null, startsAt: startsAtOf(dates[i]) });
   });
   await batch.commit();
 }
