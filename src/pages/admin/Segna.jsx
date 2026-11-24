@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/Toast';
 import GroupCard from '../../components/GroupCard';
-import { commitChange, undoEntry } from '../../lib/admin';
-import { ABSENT, DONE, WAIT, applyAbsence, applyStatus, markAllDone, subOf } from '../../lib/groups';
+import { undoEntry } from '../../lib/admin';
+import { useMarking } from '../../useMarking';
+import { ABSENT, DONE, WAIT, subOf } from '../../lib/groups';
 import { entryText } from '../../lib/history';
 import { formatDate } from '../../lib/dates';
 import { errMsg } from '../../hooks';
 
 export default function Segna() {
   const { groups, groupsById, studentsById, today, history, nameOf, currentPid, groupLabel } = useData();
+  const { setStatus, groupDone } = useMarking();
   const toast = useToast();
   const [gid, setGid] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,32 +29,7 @@ export default function Segna() {
     try { await fn(); } catch (e) { toast(errMsg(e), { error: true }); } finally { setBusy(false); }
   }
   const undo = (e) => act(async () => { await undoEntry(e); toast('Azione annullata.'); });
-  async function commit(changed, entry, msg) {
-    await commitChange({ changed, entry, groupsById, studentsById, pid: currentPid });
-    toast(msg, { action: { label: 'Annulla', onClick: () => undoLatest() } });
-  }
-  // dopo il commit lo storico si aggiorna da solo: al tap si annulla la voce più recente (ref = valore aggiornato)
-  const histRef = useRef(history);
-  histRef.current = history;
-  const undoLatest = () => {
-    const e = histRef.current.find((h) => h.by === 'admin' && !h.undone && h.prev);  // la più recente (appena fatta)
-    if (e) undoEntry(e).then(() => toast('Azione annullata.')).catch((er) => toast(errMsg(er), { error: true }));
-  };
-
-  const setSt = (pos, status) => act(async () => {
-    const sid = g.seats[pos];
-    if (status === ABSENT) {
-      const { changed, info } = applyAbsence(groups, gid, pos);
-      const msg = info.subSid
-        ? `${nameOf(sid)} assente: entra ${nameOf(info.subSid)}, ${nameOf(sid)} passa nel gruppo successivo.`
-        : `${nameOf(sid)} assente (nessun sostituto).`;
-      await commit(changed, info, msg);
-    } else {
-      await commit(applyStatus(groups, gid, pos, status),
-        { type: status === DONE ? 'interrogato' : 'attesa', sid, group: gid },
-        status === DONE ? `${nameOf(sid)} interrogato ✔` : `${nameOf(sid)} rimesso in attesa.`);
-    }
-  });
+  const setSt = (pos, status) => act(() => setStatus(gid, pos, status));
 
   if (!g) return <p className="muted">Crea prima i gruppi (scheda Gruppi).</p>;
   const sub = subOf(groups, g);
@@ -84,9 +61,7 @@ export default function Segna() {
         ))}
       </ul>
       <p className="hint">Se segni un assente, il sostituto ({sub ? nameOf(sub) : 'nessuno'}) prende il suo posto e l'assente va al posto del sostituto.</p>
-      <button disabled={busy || g.done} onClick={() => act(async () => {
-        await commit(markAllDone(groups, gid), { type: 'gruppo_fatto', group: gid }, `Gruppo ${g.number} segnato come fatto.`);
-      })}>Segna tutto il gruppo come interrogato</button>
+      <button disabled={busy || g.done} onClick={() => act(() => groupDone(gid))}>Segna tutto il gruppo come interrogato</button>
 
       <div className="undo">
         <button className="danger" disabled={busy || !lastUndoable} onClick={() => undo(lastUndoable)}>↩️ Annulla ultima azione</button>

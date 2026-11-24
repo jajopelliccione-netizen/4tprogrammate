@@ -7,7 +7,7 @@ import { myEntries, mySubstitutions, nextEntry, progSummary, whenLabel } from '.
 const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'assente' };
 
 // Parte alta della Cartina: prossima interrogazione, tutte le tue, riepilogo delle materie.
-export default function Dashboard({ openPid, onToggle, renderOpen }) {
+export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
   const { allGroups, programmate, mySid, today, nameOf, currentPid, incoming, isLive, subjectOf, groupLabel } = useData();
   const richieste = mySid ? incoming.filter(isLive) : [];
   const entries = mySid ? myEntries(allGroups, programmate, mySid, today) : [];
@@ -35,6 +35,9 @@ export default function Dashboard({ openPid, onToggle, renderOpen }) {
                   {next.mates.length ? next.mates.map((s) => <span key={s} className="mate">{nameOf(s)}</span>) : <span className="mate">nessun altro</span>}
                 </div>
               </div>
+              {onSwap && next.upcoming && (
+                <button className="hero-btn" onClick={() => onSwap(next.prog.id)}>🔄 Chiedi uno scambio</button>
+              )}
             </>
           ) : (
             <>

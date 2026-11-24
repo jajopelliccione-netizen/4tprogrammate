@@ -211,3 +211,11 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .reqrow .rq-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; } .reqrow small { color: #9a3412; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reqrow .r-go { font-weight: 800; font-size: .82rem; white-space: nowrap; }
 @media print { .reqbox { display: none !important; } }
+
+.pickerlist { list-style: none; margin: 8px 0 0; padding: 0; max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.pickerlist button { width: 100%; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border-radius: 14px; }
+.pickerlist small { color: var(--muted); font-weight: 500; }
+.bigact { width: 100%; margin: 4px 0 10px; }
+.markbtns { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; } .markbtns button { width: 100%; justify-content: flex-start; text-align: left; }
+.markinfo { font-size: .86rem; color: var(--muted); margin: 2px 0 4px 4px; }
+.hero-btn { margin-top: 16px; width: 100%; background: #ffffff; color: var(--brand); border: 0; font-weight: 800; } .hero-btn:hover { background: #ffffffee; } @media print { .hero-btn { display: none; } }

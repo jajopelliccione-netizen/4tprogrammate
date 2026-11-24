@@ -5,7 +5,7 @@ const COLORS = ['arancione', 'blu', 'verde', 'viola', 'giallo', 'rosa'];
 export const colorOf = (n) => COLORS[(n - 1 + COLORS.length * 10) % COLORS.length];
 
 // Card di un gruppo (stile "foglio"): data, 4 nomi con quadratino, sostituto.
-export default function GroupCard({ group, groups, studentsById, today, mySid, onSeat, canTap }) {
+export default function GroupCard({ group, groups, studentsById, today, mySid, onSeat, canTap, footerExtra }) {
   const sub = subOf(groups, group);
   const isToday = group.date === today;
   const past = group.date && group.date < today;
@@ -41,7 +41,10 @@ export default function GroupCard({ group, groups, studentsById, today, mySid, o
           );
         })}
       </ul>
-      <footer>Sostituto: <b>{sub ? studentsById[sub]?.name : '—'}</b></footer>
+      <footer>
+        <span>Sostituto: <b>{sub ? studentsById[sub]?.name : '—'}</b></span>
+        {footerExtra}
+      </footer>
     </section>
   );
 }
