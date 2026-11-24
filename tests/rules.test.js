@@ -413,46 +413,59 @@ test('storico: l\'admin può eliminare le voci, uno studente no', async () => {
   await assertSucceeds(b.commit());
 });
 
-// ------------------------------------------- passaggio del ruolo di sostituto ----
-test('sostituto: passa il ruolo solo a una persona del proprio gruppo effettivo', async () => {
+// ------------------------------------------- passaggio del ruolo di sostituto (con accettazione) ----
+const subReq = (over = {}) => ({ gid: 'g01', fromSid: 'B', toSid: 'D', status: 'pending', createdAt: serverTimestamp(), ...over });
+async function seedSubGroups() {
   await env.withSecurityRulesDisabled(async (ctx) => {
     const adb = ctx.firestore();
-    // g01 (A,C,-,-) → il suo gruppo successivo è g02: lo riempiamo
-    await setDoc(doc(adb, 'groups', 'g02'), { number: 2, pid: '', date: '2099-01-02', startsAt: future(),
-      seats: ['B', 'D', 'E', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false });
-  });
-  // B è il 1° del gruppo dopo → sostituto automatico di g01. Passa il ruolo a D (stesso gruppo): ok
-  await assertSucceeds(updateDoc(doc(as(UB), 'groups', 'g01'), { subId: 'D' }));
-});
-
-test('sostituto: non può passare il ruolo a chi è in un altro gruppo, a se stesso, né farlo chi non è sostituto', async () => {
-  await env.withSecurityRulesDisabled(async (ctx) => {
-    const adb = ctx.firestore();
+    // g01 con sostituto automatico B (1° del gruppo dopo); D ed E sono nel gruppo di B (g02)
+    await updateDoc(doc(adb, 'groups', 'g01'), { subId: '' });
     await setDoc(doc(adb, 'groups', 'g02'), { number: 2, pid: '', date: '2099-01-02', startsAt: future(),
       seats: ['B', 'D', 'E', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false });
     await setDoc(doc(adb, 'groups', 'g03'), { number: 3, pid: '', date: '2099-01-03', startsAt: future(),
       seats: ['F', '', '', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false });
+    await setDoc(doc(adb, 'users', 'uidD'), { role: 'student', studentId: 'D', inviteToken: 'x' });
+    await setDoc(doc(adb, 'students', 'D'), { name: 'D', activated: true, uid: 'uidD', authEmail: 'D@x.it', excluded: false, order: 8 });
   });
-  const b = as(UB);
-  await assertFails(updateDoc(doc(b, 'groups', 'g01'), { subId: 'F' }));       // persona di un altro gruppo
-  await assertFails(updateDoc(doc(b, 'groups', 'g01'), { subId: 'B' }));       // a se stesso
-  await assertFails(updateDoc(doc(b, 'groups', 'g01'), { subId: 'D', seats: ['B', 'C', '', ''] })); // tocca altro
-  await assertFails(updateDoc(doc(as(UC), 'groups', 'g01'), { subId: 'D' }));  // C non è il sostituto
-  await assertFails(updateDoc(doc(as(UA), 'groups', 'g01'), { subId: 'D' }));  // neppure A
+}
+const acceptSub = (db, id = 'r1', over = {}) => {
+  const b = writeBatch(db);
+  b.update(doc(db, 'subRequests', id), { status: 'accepted', resolvedAt: serverTimestamp() });
+  b.update(doc(db, 'groups', 'g01'), { subId: over.subId ?? 'D', lastSubReq: id });
+  return b;
+};
+
+test('sostituto: chiede a una persona del PROPRIO gruppo; solo se lei accetta il ruolo passa', async () => {
+  await seedSubGroups();
+  await assertSucceeds(setDoc(doc(as(UB), 'subRequests', 'r1'), subReq()));
+  // finché non accetta il ruolo non cambia: B non può scrivere subId da solo
+  await assertFails(updateDoc(doc(as(UB), 'groups', 'g01'), { subId: 'D' }));
+  // la vede solo chi è coinvolto
+  await assertSucceeds(getDoc(doc(as('uidD'), 'subRequests', 'r1')));
+  await assertFails(getDoc(doc(as(UC), 'subRequests', 'r1')));
+  // chi ha mandato la richiesta non può accettarla al posto di D
+  await assertFails(acceptSub(as(UB)).commit());
+  // D accetta: ora D è il sostituto
+  await assertSucceeds(acceptSub(as('uidD')).commit());
 });
 
-test('sostituto manuale: solo lui può passare il ruolo; il nuovo sostituto può passarlo di nuovo', async () => {
-  await env.withSecurityRulesDisabled(async (ctx) => {
-    const adb = ctx.firestore();
-    await updateDoc(doc(adb, 'groups', 'g01'), { subId: 'E' });
-    await setDoc(doc(adb, 'groups', 'g02'), { number: 2, pid: '', date: '2099-01-02', startsAt: future(),
-      seats: ['B', 'D', 'E', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false });
-    await setDoc(doc(adb, 'users', 'uidE'), { role: 'student', studentId: 'E', inviteToken: 'x' });
-  });
-  // B non è più il sostituto (lo è E, scelto a mano): non può
-  await assertFails(updateDoc(doc(as(UB), 'groups', 'g01'), { subId: 'D' }));
-  // E sì → passa a B
-  await assertSucceeds(updateDoc(doc(as('uidE'), 'groups', 'g01'), { subId: 'B' }));
+test('sostituto: non può chiedere a chi è in un altro gruppo, a sé stesso, né farlo chi non è sostituto', async () => {
+  await seedSubGroups();
+  await assertFails(setDoc(doc(as(UB), 'subRequests', 'a'), subReq({ toSid: 'F' })));        // altro gruppo
+  await assertFails(setDoc(doc(as(UB), 'subRequests', 'b'), subReq({ toSid: 'B' })));        // se stesso
+  await assertFails(setDoc(doc(as(UC), 'subRequests', 'c'), subReq({ fromSid: 'C' })));      // C non è il sostituto
+  await assertFails(setDoc(doc(as(UA), 'subRequests', 'd'), subReq({ fromSid: 'B' })));      // a nome di un altro
+});
+
+test('sostituto: il destinatario può rifiutare, chi chiede può annullare; accettazione manomessa rifiutata', async () => {
+  await seedSubGroups();
+  await assertSucceeds(setDoc(doc(as(UB), 'subRequests', 'r1'), subReq()));
+  await assertFails(updateDoc(doc(as(UB), 'subRequests', 'r1'), { status: 'rejected', resolvedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(doc(as('uidD'), 'subRequests', 'r1'), { status: 'rejected', resolvedAt: serverTimestamp() }));
+  await assertSucceeds(setDoc(doc(as(UB), 'subRequests', 'r2'), subReq()));
+  await assertSucceeds(updateDoc(doc(as(UB), 'subRequests', 'r2'), { status: 'cancelled', resolvedAt: serverTimestamp() }));
+  await assertSucceeds(setDoc(doc(as(UB), 'subRequests', 'r3'), subReq()));
+  await assertFails(acceptSub(as('uidD'), 'r3', { subId: 'E' }).commit());   // metto un'altra persona: no
 });
 
 // ---------------------------------- chi è sostituto del gruppo prima non può cambiare gruppo ----
@@ -461,7 +474,7 @@ test('sostituto del gruppo prima: non può chiedere uno scambio finché non pass
   const data = swapData({ fromSid: 'Z', fromGroup: 'g02', fromPos: 1, toSid: 'C', toGroup: 'g01', toPos: 1 });
   await assertFails(setDoc(doc(as('uidZ'), 'swaps', 'sz'), data));
   // Z passa il ruolo a B (stesso gruppo): ora può
-  await assertSucceeds(updateDoc(doc(as('uidZ'), 'groups', 'g01'), { subId: 'B' }));
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'groups', 'g01'), { subId: 'B' }); });  // ruolo passato (accettato)
   await assertSucceeds(setDoc(doc(as('uidZ'), 'swaps', 'sz2'), data));
 });
 
@@ -478,6 +491,6 @@ test('sostituto del gruppo prima: non può nemmeno ACCETTARE finché non passa i
     return b;
   };
   await assertFails(accept(as('uidZ')).commit());
-  await assertSucceeds(updateDoc(doc(as('uidZ'), 'groups', 'g01'), { subId: 'B' }));  // passa il ruolo
+  await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'groups', 'g01'), { subId: 'B' }); });  // ruolo passato (accettato)
   await assertSucceeds(accept(as('uidZ')).commit());
 });

@@ -24,6 +24,7 @@ service cloud.firestore {
     function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
     function groupPath(id) { return /databases/$(database)/documents/groups/$(id); }
     function swapPath(id) { return /databases/$(database)/documents/swaps/$(id); }
+    function subReqPath(id) { return /databases/$(database)/documents/subRequests/$(id); }
     function studentPath(id) { return /databases/$(database)/documents/students/$(id); }
     function invitePath(id) { return /databases/$(database)/documents/invites/$(id); }
 
@@ -171,21 +172,27 @@ service cloud.firestore {
       }
 
       // ---- passaggio del ruolo di SOSTITUTO ------------------------------------------------
-      // Il sostituto del gruppo N sta nel gruppo N+1. Può passare il ruolo SOLO a un'altra
-      // persona del suo gruppo effettivo (N+1), ancora in attesa. Cambia solo il campo subId.
+      // Il sostituto del gruppo N sta nel gruppo N+1 e può passare il ruolo SOLO a una persona
+      // del suo gruppo (N+1), e solo se quella persona ACCETTA: la richiesta (subRequests) deve
+      // passare a "accepted" nello stesso batch, scritto dal destinatario. Cambia solo subId.
       function studentSubTransfer(gid) {
         let d = request.resource.data;
         let old = resource.data;
+        let sr = get(subReqPath(d.lastSubReq)).data;
         let next = get(groupPath(groupIdAt(old, old.number + 1))).data;
-        let me = profile().studentId;
         return isStudent()
-          && d.diff(old).affectedKeys().hasOnly(['subId'])
-          && d.subId is string && d.subId != me
+          && d.lastSubReq is string
+          && d.diff(old).affectedKeys().hasOnly(['subId', 'lastSubReq'])
+          && sr.status == 'pending'
+          && getAfter(subReqPath(d.lastSubReq)).data.status == 'accepted'
+          && sr.gid == gid
+          && sr.toSid == profile().studentId
+          && d.subId == sr.toSid
           && pidOf(next) == pidOf(old)
           && old.done != true
           && dayNotStarted(old)
-          && effectiveSub(old, next) == me
-          && isPendingMember(next, d.subId);
+          && effectiveSub(old, next) == sr.fromSid
+          && isPendingMember(next, sr.toSid);
       }
 
       function studentSwapWrite(gid) {
@@ -285,6 +292,57 @@ service cloud.firestore {
             || (old.fromSid == me && nw.status == 'cancelled')
             // uno dei due segna come DECADUTA una richiesta non più applicabile
             || ((old.fromSid == me || old.toSid == me) && nw.status == 'expired' && !swapValid(old))
+          );
+      }
+    }
+
+    // -------------------------------------------------------------- subRequests --
+    // Richiesta di passare il ruolo di sostituto di un gruppo a una persona del gruppo successivo.
+    match /subRequests/{id} {
+      allow read: if isAdmin()
+        || (isStudent() && (resource.data.fromSid == profile().studentId || resource.data.toSid == profile().studentId));
+      allow create: if isStudent() && validNewSubRequest(request.resource.data);
+      allow update: if isAdmin() || studentSubRequestUpdate();
+      allow delete: if isAdmin();
+
+      // La richiesta ha ancora senso adesso? (chi la manda è ancora il sostituto, il destinatario è ancora
+      // nel gruppo del sostituto e in attesa, il gruppo non è iniziato)
+      function subRequestStillValid(r) {
+        let g = get(groupPath(r.gid)).data;
+        let next = get(groupPath(groupIdAt(g, g.number + 1))).data;
+        return pidOf(next) == pidOf(g)
+          && g.done != true
+          && dayNotStarted(g)
+          && effectiveSub(g, next) == r.fromSid
+          && isPendingMember(next, r.toSid);
+      }
+
+      function validNewSubRequest(d) {
+        return d.keys().hasOnly(['gid', 'fromSid', 'toSid', 'status', 'createdAt', 'resolvedAt'])
+          && d.keys().hasAll(['gid', 'fromSid', 'toSid', 'status', 'createdAt'])
+          && d.status == 'pending'
+          && d.gid is string && d.toSid is string
+          && d.fromSid == profile().studentId
+          && d.toSid != d.fromSid
+          && d.createdAt == request.time
+          && subRequestStillValid(d);
+      }
+
+      function studentSubRequestUpdate() {
+        let old = resource.data;
+        let nw = request.resource.data;
+        let me = profile().studentId;
+        return isStudent()
+          && old.status == 'pending'
+          && nw.diff(old).affectedKeys().hasOnly(['status', 'resolvedAt'])
+          && nw.resolvedAt == request.time
+          && (
+            // il destinatario ACCETTA: valido solo se nello stesso batch il gruppo passa a lui il ruolo
+            (old.toSid == me && nw.status == 'accepted' && subRequestStillValid(old)
+              && getAfter(groupPath(old.gid)).data.subId == old.toSid)
+            || (old.toSid == me && nw.status == 'rejected')
+            || (old.fromSid == me && nw.status == 'cancelled')
+            || ((old.fromSid == me || old.toSid == me) && nw.status == 'expired' && !subRequestStillValid(old))
           );
       }
     }

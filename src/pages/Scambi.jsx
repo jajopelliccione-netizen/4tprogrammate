@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import { acceptSwap, setSwapStatus } from '../lib/swaps';
+import { acceptSubRequest, setSubRequestStatus } from '../lib/substitute';
 import { colorOf } from '../components/GroupCard';
 import SubBlock, { SubBlockText } from '../components/SubBlock';
 import { formatDate } from '../lib/dates';
@@ -29,7 +30,7 @@ function Side({ who, gid, group, groupLabel }) {
 
 export default function Scambi() {
   const { isAdmin } = useAuth();
-  const { incoming, outgoing, nameOf, groupsById, today, isLive, groupLabel, subjectOf, mySid, subBlock } = useData();
+  const { incoming, outgoing, nameOf, groupsById, today, isLive, groupLabel, subjectOf, mySid, subBlock, subIn, subOut, subLive } = useData();
   const toast = useToast();
   const [busy, setBusy] = useState('');
   const [blockInfo, setBlockInfo] = useState(null);
@@ -80,6 +81,8 @@ export default function Scambi() {
     );
   }
 
+  const subInPending = subIn.filter(subLive);
+  const subOutPending = subOut.filter(subLive);
   const inPending = incoming.filter((s) => s.status === 'pending' && isLive(s));
   const outPending = outgoing.filter((s) => s.status === 'pending' && isLive(s));
   const past = [...incoming, ...outgoing]
@@ -108,6 +111,30 @@ export default function Scambi() {
           </div>
           </>
         )} />
+      ))}
+
+      {(subInPending.length > 0 || subOutPending.length > 0) && <h2>Ruolo di sostituto</h2>}
+      {subInPending.map((r) => (
+        <div className="item swcard" key={r.id}>
+          <div className="sw-top"><span className="pill">{subjectOf(r.gid)}</span></div>
+          <p className="sw-sentence"><b>{nameOf(r.fromSid)}</b> ti chiede di fare il <b>sostituto del {groupLabel(r.gid)}</b>.</p>
+          <small className="sw-help">Il sostituto è la persona che prende il posto di un assente di quel gruppo.</small>
+          <div className="row">
+            <button className="primary" disabled={busy === r.id}
+              onClick={() => run(r.id, () => acceptSubRequest(r), 'Ora sei il sostituto.')}>Accetta</button>
+            <button disabled={busy === r.id}
+              onClick={() => run(r.id, () => setSubRequestStatus(r.id, 'rejected'), 'Richiesta rifiutata.')}>Rifiuta</button>
+          </div>
+        </div>
+      ))}
+      {subOutPending.map((r) => (
+        <div className="item swcard" key={r.id}>
+          <div className="sw-top"><span className="pill">{subjectOf(r.gid)}</span></div>
+          <p className="sw-sentence">Hai chiesto a <b>{nameOf(r.toSid)}</b> di fare il sostituto del {groupLabel(r.gid)}.</p>
+          <small className="sw-help">Aspetta che risponda.</small>
+          <button disabled={busy === r.id}
+            onClick={() => run(r.id, () => setSubRequestStatus(r.id, 'cancelled'), 'Richiesta annullata.')}>Annulla richiesta</button>
+        </div>
       ))}
 
       {blockInfo && <SubBlock block={blockInfo} onClose={() => setBlockInfo(null)} />}

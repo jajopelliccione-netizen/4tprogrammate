@@ -5,6 +5,7 @@ import { formatDate } from '../lib/dates';
 import { WAIT, pidOf } from '../lib/groups';
 import { colorOf } from './GroupCard';
 import SubTransfer from './SubTransfer';
+import { setSubRequestStatus } from '../lib/substitute';
 import Icon from './Icon';
 import { myEntries, mySubstitutions, nextEntry, progSummary, whenLabel } from '../lib/dashboard';
 
@@ -12,9 +13,11 @@ const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'ass
 
 // Parte alta della Cartina: prossima interrogazione, tutte le tue, riepilogo delle materie.
 export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
-  const { allGroups, programmate, mySid, today, nameOf, currentPid, incoming, isLive, subjectOf, groupLabel } = useData();
+  const { allGroups, programmate, mySid, today, nameOf, currentPid, incoming, isLive, subjectOf, groupLabel, subIn, subOut, subLive } = useData();
   const [passSub, setPassSub] = useState(null);
   const richieste = mySid ? incoming.filter(isLive) : [];
+  const subRichieste = mySid ? subIn.filter(subLive) : [];
+  const mioPending = (gid) => subOut.find((r) => r.gid === gid && subLive(r));   // richiesta di passaggio già inviata
   const entries = mySid ? myEntries(allGroups, programmate, mySid, today) : [];
   const next = nextEntry(entries);
   const subs = mySid ? mySubstitutions(allGroups, programmate, mySid, today) : [];
@@ -43,8 +46,17 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
               )}
               {subs.length > 0 && (
                 <p className="hero-note">
-                  <span>Sei anche sostituto: {subs[0].prog.subject}, Gruppo {subs[0].group.number}{subs[0].days !== null ? ` (${whenLabel(subs[0].days)})` : ''}</span>
-                  <button className="hero-link" onClick={() => setPassSub(subs[0])}>Passa il ruolo</button>
+                  {mioPending(subs[0].group.id) ? (
+                    <>
+                      <span>Hai chiesto a {nameOf(mioPending(subs[0].group.id).toSid)} di fare il sostituto: aspetta che accetti.</span>
+                      <button className="hero-link" onClick={() => setSubRequestStatus(mioPending(subs[0].group.id).id, 'cancelled')}>Annulla</button>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sei anche sostituto: {subs[0].prog.subject}, Gruppo {subs[0].group.number}{subs[0].days !== null ? ` (${whenLabel(subs[0].days)})` : ''}</span>
+                      <button className="hero-link" onClick={() => setPassSub(subs[0])}>Passa il ruolo</button>
+                    </>
+                  )}
                 </p>
               )}
             </>
@@ -61,16 +73,26 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
       {mySid && (
         <section className="reqbox">
           <header>
-            <b>Scambi{richieste.length > 0 && <span className="reqcount on">{richieste.length}</span>}</b>
+            <b>Scambi{richieste.length + subRichieste.length > 0 && <span className="reqcount on">{richieste.length + subRichieste.length}</span>}</b>
             {onSwap && swapPid !== undefined && (
               <button className="small primary" onClick={() => onSwap(swapPid)}><Icon n="swap" size={16} /> Chiedi scambio</button>
             )}
           </header>
           <div className="reqlist">
-            {richieste.length === 0 ? (
+            {richieste.length + subRichieste.length === 0 ? (
               <p className="reqempty">Nessuna richiesta ricevuta.</p>
             ) : (
-              richieste.map((r) => (
+              <>
+              {subRichieste.map((r) => (
+                <Link key={r.id} to="/scambi" className="reqrow">
+                  <span className="rq-txt">
+                    <b>{nameOf(r.fromSid)}</b>
+                    <small>Ti chiede di fare il sostituto · {subjectOf(r.gid) ? `${subjectOf(r.gid)} · ` : ''}{groupLabel(r.gid)}</small>
+                  </span>
+                  <span className="r-go">Rispondi →</span>
+                </Link>
+              ))}
+              {richieste.map((r) => (
                 <Link key={r.id} to="/scambi" className="reqrow">
                   <span className="rq-txt">
                     <b>{nameOf(r.fromSid)}</b>
@@ -80,7 +102,8 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                   </span>
                   <span className="r-go">Rispondi →</span>
                 </Link>
-              ))
+              ))}
+              </>
             )}
           </div>
         </section>

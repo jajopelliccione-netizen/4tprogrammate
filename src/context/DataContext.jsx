@@ -5,6 +5,8 @@ import { useAuth } from './AuthContext';
 import { useToday } from '../hooks';
 import { findSeat, groupNumber, pidOf, previousGroupIfSub, sortGroups } from '../lib/groups';
 import { setSwapStatus, swapValidNow } from '../lib/swaps';
+import { subRequestLive } from '../lib/subRules';
+import { setSubRequestStatus } from '../lib/substitute';
 
 const Ctx = createContext(null);
 export const useData = () => useContext(Ctx);
@@ -24,6 +26,8 @@ export function DataProvider({ children }) {
   const [pidSel, setPidSel] = useState(() => { try { return sessionStorage.getItem('pid'); } catch { return null; } });
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
+  const [subIn, setSubIn] = useState([]);
+  const [subOut, setSubOut] = useState([]);
 
   useEffect(() => {
     const err = (e) => console.error(e);
@@ -42,6 +46,8 @@ export function DataProvider({ children }) {
       subs.push(
         onSnapshot(query(collection(db, 'swaps'), where('toSid', '==', profile.studentId)), (s) => setIncoming(s.docs.map(withId).sort(byCreated)), err),
         onSnapshot(query(collection(db, 'swaps'), where('fromSid', '==', profile.studentId)), (s) => setOutgoing(s.docs.map(withId).sort(byCreated)), err),
+        onSnapshot(query(collection(db, 'subRequests'), where('toSid', '==', profile.studentId)), (s) => setSubIn(s.docs.map(withId).sort(byCreated)), err),
+        onSnapshot(query(collection(db, 'subRequests'), where('fromSid', '==', profile.studentId)), (s) => setSubOut(s.docs.map(withId).sort(byCreated)), err),
       );
     }
     return () => subs.forEach((u) => u());
@@ -93,6 +99,8 @@ export function DataProvider({ children }) {
   // Una richiesta in attesa è "valida" solo se i due posti sono ancora quelli e il giorno non è iniziato.
   const isLive = (sw) => sw.status === 'pending' && swapValidNow(sw, groupsById, today);
   const pendingIncoming = incoming.filter(isLive);
+  const subLive = (r) => r.status === 'pending' && subRequestLive(r, allGroups, today);
+  const subIncomingLive = subIn.filter(subLive);
 
   // Le richieste non più valide decadono da sole (le segna come "expired" chi le vede per primo).
   const expiring = useRef(new Set());
@@ -104,12 +112,18 @@ export function DataProvider({ children }) {
         setSwapStatus(sw.id, 'expired').catch(() => {});
       }
     });
-  }, [incoming, outgoing, groupsById, groupsRaw, today]);
+    [...subIn, ...subOut].forEach((r) => {
+      if (r.status === 'pending' && !subRequestLive(r, allGroups, today) && !expiring.current.has(r.id)) {
+        expiring.current.add(r.id);
+        setSubRequestStatus(r.id, 'expired').catch(() => {});
+      }
+    });
+  }, [incoming, outgoing, subIn, subOut, allGroups, groupsById, groupsRaw, today]);
 
   const value = {
     today, subject: currentProg?.subject || '', programmate, currentPid, currentProg, setPid, allGroups, groupLabel, subjectOf,
     students, studentsById, nameOf, groups, groupsById, groupsLoaded: groupsRaw !== null && programmateRaw !== null, history,
-    rulesError, subBlock, mySid, mySeat, incoming, outgoing, isLive, badge: pendingIncoming.length,
+    rulesError, subBlock, mySid, mySeat, incoming, outgoing, isLive, subIn, subOut, subLive, badge: pendingIncoming.length + subIncomingLive.length,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
