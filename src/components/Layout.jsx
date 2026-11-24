@@ -16,7 +16,7 @@ export default function Layout() {
   const { isAdmin } = useAuth();
   return (
     <div className="app">
-      <header className="topbar"><span className="logo">4T</span>Interrogazioni 4T SSA</header>
+      <header className="topbar"><span className="logo">4T</span>Interrogazioni</header>
       <main className="main">
         {rulesError && (
           <div className="alertbox">
