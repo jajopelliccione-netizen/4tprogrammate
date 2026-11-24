@@ -194,3 +194,11 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .richieste .r-go { font-weight: 800; font-size: .85rem; white-space: nowrap; }
 @media print { .richieste { display: none !important; } }
 .timeline li > div { flex: 1; min-width: 0; } .timeline .del { margin-left: auto; flex: none; min-height: 32px; width: 32px; padding: 0; }
+
+/* ---- programmate come box apribili ---- */
+.materie { display: flex; flex-direction: column; grid-template-columns: none; gap: 12px; }
+.matwrap { display: flex; flex-direction: column; gap: 10px; }
+.matcard { width: 100%; }
+.mc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; } .mc-chev { color: var(--brand); font-size: .8rem; }
+.mc-mine { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: .95rem; color: var(--ink); font-weight: 500; } .mc-mine b { font-weight: 800; }
+.aperta { animation: pop .25s ease; padding: 4px 0 8px; }

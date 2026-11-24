@@ -7,7 +7,7 @@ import { myEntries, mySubstitutions, nextEntry, progSummary, whenLabel } from '.
 const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'assente' };
 
 // Parte alta della Cartina: prossima interrogazione, tutte le tue, riepilogo delle materie.
-export default function Dashboard({ onPickProg }) {
+export default function Dashboard({ openPid, onToggle, renderOpen }) {
   const { allGroups, programmate, mySid, today, nameOf, currentPid, incoming, isLive, subjectOf } = useData();
   const richieste = mySid ? incoming.filter(isLive) : [];
   const entries = mySid ? myEntries(allGroups, programmate, mySid, today) : [];
@@ -69,45 +69,38 @@ export default function Dashboard({ onPickProg }) {
         </div>
       )}
 
-      {entries.length > 1 && (
-        <>
-          <h2>Le tue interrogazioni</h2>
-          <ul className="mine-list">
-            {entries.map((e) => (
-              <li key={e.group.id} className={e.upcoming ? '' : 'passata'}>
-                <button onClick={() => onPickProg(e.prog.id)}>
-                  <span className="ml-mat">{e.prog.subject}</span>
-                  <span className="ml-det">Gruppo {e.group.number} · {formatDate(e.group.date)}</span>
-                  <span className={`pill ${e.days === 0 && e.upcoming ? 'oggi-pill' : ''}`}>
-                    {e.upcoming ? whenLabel(e.days) : STATO[e.status] || 'fatto'}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      <h2>Tutte le materie</h2>
+      <h2>Le programmate</h2>
       {programmate.length === 0 && <p className="muted">Le programmate non sono ancora state create.</p>}
       <div className="materie">
         {programmate.map((p) => {
           const groups = allGroups.filter((g) => pidOf(g) === p.id);
           const sum = progSummary(groups, today);
           const mine = entries.find((e) => e.prog.id === p.id);
-          const pct = sum.people ? Math.round((sum.interrogati / sum.people) * 100) : 0;
+          const open = p.id === openPid;
           return (
-            <button key={p.id || 'x'} className={`matcard ${p.id === currentPid ? 'on' : ''}`} onClick={() => onPickProg(p.id)}>
-              <span className="mc-title">{p.subject}</span>
-              <span className="mc-sub">
-                {sum.next ? `Prossimo: Gruppo ${sum.next.number} · ${whenLabel(sum.nextDays)}` : sum.total ? 'Tutti i gruppi fatti' : 'Nessun gruppo'}
-              </span>
-              <span className="bar"><i style={{ width: `${pct}%` }} /></span>
-              <span className="mc-foot">
-                <span>{sum.done}/{sum.total} gruppi · {sum.interrogati}/{sum.people} interrogati</span>
-                {mine && <span className="pill">Tu: Gruppo {mine.group.number}</span>}
-              </span>
-            </button>
+            <div key={p.id || 'x'} className="matwrap">
+              <button className={`matcard ${open ? 'on' : ''}`} aria-expanded={open} onClick={() => onToggle(p.id)}>
+                <span className="mc-head">
+                  <span className="mc-title">{p.subject}</span>
+                  <span className="mc-chev">{open ? '▲' : '▼'}</span>
+                </span>
+                {mine ? (
+                  <span className="mc-mine">
+                    Tu: <b>Gruppo {mine.group.number}</b> · {formatDate(mine.group.date)}
+                    <span className={`pill ${mine.days === 0 && mine.upcoming ? 'oggi-pill' : ''}`}>
+                      {mine.upcoming ? whenLabel(mine.days) : STATO[mine.status] || 'fatto'}
+                    </span>
+                  </span>
+                ) : mySid ? (
+                  <span className="mc-sub">Non sei in questa programmata</span>
+                ) : null}
+                <span className="mc-sub">
+                  {sum.next ? `Prossimo gruppo: ${sum.next.number} · ${whenLabel(sum.nextDays)}` : sum.total ? 'Tutti i gruppi fatti' : 'Nessun gruppo'}
+                  {' · '}{sum.done}/{sum.total} fatti
+                </span>
+              </button>
+              {open && renderOpen(p.id)}
+            </div>
           );
         })}
       </div>

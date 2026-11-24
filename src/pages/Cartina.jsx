@@ -12,13 +12,13 @@ import { errMsg } from '../hooks';
 
 export default function Cartina() {
   const { user, isAdmin } = useAuth();
-  const { subject, programmate, setPid, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
+  const { programmate, setPid, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
   const toast = useToast();
   const gridRef = useRef(null);
-  const materiaRef = useRef(null);
-  const pick = (id) => {
+  const [openPid, setOpenPid] = useState(null);   // programmata aperta (null = tutte chiuse)
+  const toggle = (id) => {
+    setOpenPid((cur) => (cur === id ? null : id));
     setPid(id);
-    setTimeout(() => materiaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
   const [target, setTarget] = useState(null); // { group, pos }
   const [busy, setBusy] = useState(false);
@@ -69,16 +69,11 @@ export default function Cartina() {
 
   if (!groupsLoaded) return <p className="muted">Caricamento…</p>;
 
-  return (
-    <>
-      <Dashboard onPickProg={pick} />
-
-      <div ref={materiaRef} className="materia-anchor" />
-      <h2 className="titolo">Cartina{subject && <> · <b>{subject}</b></>} <small>· 4T SSA</small></h2>
+  const gruppi = (
+    <div className="aperta">
       {mySid && mySeat && mySwappable && <p className="hint">Per chiedere uno scambio tocca il nome di un compagno (⇄).</p>}
-
       {groups.length === 0 ? (
-        <p className="muted">{programmate.length ? 'Questa programmata non ha ancora gruppi.' : 'Le programmate non sono ancora state create.'}</p>
+        <p className="muted">Questa programmata non ha ancora gruppi.</p>
       ) : (
         <div className="grid" ref={gridRef}>
           {groups.map((g) => (
@@ -88,11 +83,16 @@ export default function Cartina() {
           ))}
         </div>
       )}
-
       <div className="row no-print">
         <button onClick={download}>⬇️ Scarica immagine</button>
         <button onClick={() => window.print()}>🖨️ Stampa / PDF</button>
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      <Dashboard openPid={openPid} onToggle={toggle} renderOpen={() => gruppi} />
 
       {target && (
         <Modal title="Chiedere uno scambio?" onClose={() => setTarget(null)}
