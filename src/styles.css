@@ -241,3 +241,14 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .mates { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
 .mate { padding: 9px 6px; text-align: center; font-size: .82rem; line-height: 1.2; border-radius: 12px; overflow-wrap: anywhere; display: flex; align-items: center; justify-content: center; min-height: 44px; }
 .gcard header .data .nodate { text-transform: none; font-weight: 600; opacity: .9; }
+
+/* gruppo "in corso" in grande, il tuo in piccolo */
+.cg.arancione { --c1: #fb923c; --c2: #ea580c; } .cg.blu { --c1: #60a5fa; --c2: #2563eb; } .cg.verde { --c1: #4ade80; --c2: #16a34a; }
+.cg.viola { --c1: #a78bfa; --c2: #7c3aed; } .cg.giallo { --c1: #fde047; --c2: #eab308; } .cg.rosa { --c1: #f9a8d4; --c2: #db2777; }
+.cg { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, var(--c1), var(--c2)); color: #fff; border-radius: 18px; padding: 12px 14px; box-shadow: 0 12px 22px -14px var(--c2); text-shadow: 0 1px 2px #0003; }
+.cg.giallo { color: #422006; text-shadow: none; }
+.cg-num { width: 54px; height: 54px; border-radius: 16px; background: #ffffff38; border: 1px solid #ffffff55; display: grid; place-items: center; font-size: 1.9rem; font-weight: 800; line-height: 1; flex: none; }
+.cg-txt { display: flex; flex-direction: column; flex: 1; min-width: 0; } .cg-txt small { text-transform: uppercase; letter-spacing: .08em; font-size: .64rem; font-weight: 700; opacity: .9; } .cg-txt b { font-size: 1.45rem; letter-spacing: -.02em; line-height: 1.15; }
+.cg-when { background: #ffffff38; border: 1px solid #ffffff55; padding: 4px 12px; border-radius: 99px; font-weight: 800; font-size: .82rem; white-space: nowrap; } .cg-when.oggi { background: #e11d48; color: #fff; border-color: transparent; text-shadow: none; }
+.mc-mine.small { font-size: .84rem; color: var(--muted); } .mc-mine.small b { color: var(--ink); font-weight: 700; }
+.matcard.light .cg { padding: 8px 12px; } .matcard.light .cg-num { width: 40px; height: 40px; font-size: 1.4rem; border-radius: 12px; } .matcard.light .cg-txt b { font-size: 1.1rem; }

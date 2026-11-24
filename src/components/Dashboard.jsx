@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { formatDate } from '../lib/dates';
 import { WAIT, pidOf } from '../lib/groups';
+import { colorOf } from './GroupCard';
 import { myEntries, mySubstitutions, nextEntry, progSummary, whenLabel } from '../lib/dashboard';
 
 const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'assente' };
@@ -99,9 +100,23 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                   <span className="mc-title">{p.subject}</span>
                   <span className="mc-chev">{open ? '▲' : '▼'}</span>
                 </span>
+                {sum.next ? (
+                  <span className={`cg ${colorOf(sum.next.number)}`}>
+                    <span className="cg-num">{sum.next.number}</span>
+                    <span className="cg-txt">
+                      <small>{sum.next.date === today ? 'Oggi tocca al' : 'Ora tocca al'}</small>
+                      <b>Gruppo {sum.next.number}</b>
+                    </span>
+                    {sum.nextDays !== null && (
+                      <span className={`cg-when ${sum.nextDays === 0 ? 'oggi' : ''}`}>{whenLabel(sum.nextDays)}</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="mc-sub">{sum.total ? 'Tutti i gruppi fatti ✓' : 'Nessun gruppo'}</span>
+                )}
                 {mine ? (
-                  <span className="mc-mine">
-                    Tu: <b>Gruppo {mine.group.number}</b>
+                  <span className="mc-mine small">
+                    Il tuo: <b>Gruppo {mine.group.number}</b>
                     {mine.group.date && <> · {formatDate(mine.group.date)}</>}
                     {(mine.days !== null || !mine.upcoming) && (
                       <span className={`pill ${mine.days === 0 && mine.upcoming ? 'oggi-pill' : ''}`}>
@@ -109,11 +124,9 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                       </span>
                     )}
                   </span>
+                ) : mySid ? (
+                  <span className="mc-sub">Non sei in questa programmata</span>
                 ) : null}
-                <span className="mc-sub">
-                  {mySid && !mine ? 'Non sei in questa programmata · ' : ''}
-                  {sum.next ? `Prossimo: Gruppo ${sum.next.number}${sum.nextDays !== null ? `, ${whenLabel(sum.nextDays)}` : ''}` : sum.total ? 'Tutti i gruppi fatti' : 'Nessun gruppo'}
-                </span>
               </button>
               {open && renderOpen(p.id)}
             </div>
