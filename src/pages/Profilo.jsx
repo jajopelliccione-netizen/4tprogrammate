@@ -14,6 +14,12 @@ export default function Profilo() {
   const [pw2, setPw2] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [tema, setTema] = useState(() => document.documentElement.dataset.theme || 'light');
+  const cambiaTema = (t) => {
+    setTema(t);
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('tema', t); } catch { /* niente */ }
+  };
 
   async function change(e) {
     e.preventDefault();
@@ -36,6 +42,14 @@ export default function Profilo() {
   return (
     <>
       <h2>{isAdmin ? 'Rappresentante' : nameOf(mySid)}</h2>
+      <div className="panel flat">
+        <h3>Aspetto</h3>
+        <div className="seg" style={{ margin: '10px 0 0' }}>
+          {[['light', '☀️ Chiaro'], ['dark', '🌙 Scuro'], ['auto', 'Automatico']].map(([k, l]) => (
+            <button key={k} type="button" className={tema === k ? 'on' : ''} onClick={() => cambiaTema(k)}>{l}</button>
+          ))}
+        </div>
+      </div>
       <form className="panel flat" onSubmit={change}>
         <h3>Cambia password</h3>
         <label>Password attuale

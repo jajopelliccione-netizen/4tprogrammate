@@ -5,8 +5,10 @@
   --radius: 18px; --shadow: 0 1px 2px #0f172a0d, 0 8px 24px -8px #0f172a1f; --tab-h: 66px;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
+:root[data-theme="dark"] { --bg: #0b1020; --surface: #151b2e; --surface-2: #1b2238; --ink: #e8ecf8; --muted: #94a0bd; --line: #262e48;
+    --brand: #818cf8; --brand-2: #a78bfa; --brand-soft: #1f2546; --shadow: 0 1px 2px #0006, 0 10px 30px -10px #000a; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #0b1020; --surface: #151b2e; --surface-2: #1b2238; --ink: #e8ecf8; --muted: #94a0bd; --line: #262e48;
+:root[data-theme="auto"] { --bg: #0b1020; --surface: #151b2e; --surface-2: #1b2238; --ink: #e8ecf8; --muted: #94a0bd; --line: #262e48;
     --brand: #818cf8; --brand-2: #a78bfa; --brand-soft: #1f2546; --shadow: 0 1px 2px #0006, 0 10px 30px -10px #000a; }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -78,11 +80,17 @@ label.inline { display: flex; gap: 10px; align-items: center; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
 .gcard { --c1: #fb923c; --c2: #f97316; --tint: #fff4e8; background: var(--surface); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column;
   box-shadow: var(--shadow); border: 1px solid var(--line); animation: pop .35s ease backwards; transition: transform .2s, box-shadow .2s; }
-@media (prefers-color-scheme: dark) { .gcard { --tint: #1b2238; } }
+:root[data-theme="dark"] .gcard { --tint: #1b2238; }
+@media (prefers-color-scheme: dark) {
+:root[data-theme="auto"] .gcard { --tint: #1b2238; }
+}
 .gcard.arancione { --c1: #fb923c; --c2: #ea580c; --tint: #fff4e8; } .gcard.blu { --c1: #60a5fa; --c2: #2563eb; --tint: #eaf2ff; }
 .gcard.verde { --c1: #4ade80; --c2: #16a34a; --tint: #e9faf0; } .gcard.viola { --c1: #a78bfa; --c2: #7c3aed; --tint: #f1ecff; }
 .gcard.giallo { --c1: #fde047; --c2: #eab308; --tint: #fffbe0; } .gcard.rosa { --c1: #f9a8d4; --c2: #db2777; --tint: #ffeaf5; }
-@media (prefers-color-scheme: dark) { .gcard.arancione, .gcard.blu, .gcard.verde, .gcard.viola, .gcard.giallo, .gcard.rosa { --tint: #1b2238; } }
+:root[data-theme="dark"] .gcard.arancione, :root[data-theme="dark"] .gcard.blu, :root[data-theme="dark"] .gcard.verde, :root[data-theme="dark"] .gcard.viola, :root[data-theme="dark"] .gcard.giallo, :root[data-theme="dark"] .gcard.rosa { --tint: #1b2238; }
+@media (prefers-color-scheme: dark) {
+:root[data-theme="auto"] .gcard.arancione, :root[data-theme="auto"] .gcard.blu, :root[data-theme="auto"] .gcard.verde, :root[data-theme="auto"] .gcard.viola, :root[data-theme="auto"] .gcard.giallo, :root[data-theme="auto"] .gcard.rosa { --tint: #1b2238; }
+}
 .gcard header { background: linear-gradient(135deg, var(--c1), var(--c2)); padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #fff; text-shadow: 0 1px 2px #0003; }
 .gcard.giallo header { color: #422006; text-shadow: none; }
 .gcard header h3 { font-size: 1.02rem; font-weight: 800; letter-spacing: -.01em; }
@@ -91,7 +99,10 @@ label.inline { display: flex; gap: 10px; align-items: center; }
 .gcard ul { list-style: none; margin: 0; padding: 8px 10px; background: var(--tint); }
 .seat { padding: 2px 0; } .seat.libero { color: var(--muted); display: flex; gap: 10px; align-items: center; padding: 9px 6px; font-style: italic; font-size: .92rem; }
 .seat-in { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 8px; border-radius: 12px; border: 0; background: none; text-align: left; min-height: 42px; font-size: 1rem; color: var(--ink); font-weight: 500; }
-button.seat-in { cursor: pointer; } button.seat-in:hover { background: #ffffff80; } @media (prefers-color-scheme: dark) { button.seat-in:hover { background: #ffffff10; } }
+button.seat-in { cursor: pointer; } button.seat-in:hover { background: #ffffff80; } :root[data-theme="dark"] button.seat-in:hover { background: #ffffff10; }
+@media (prefers-color-scheme: dark) {
+:root[data-theme="auto"] button.seat-in:hover { background: #ffffff10; }
+}
 .box { width: 22px; height: 22px; border: 2px solid var(--c2); border-radius: 7px; background: var(--surface); display: inline-grid; place-items: center; font-weight: 800; flex: none; font-size: .9rem; line-height: 1; color: #fff; transition: .2s; }
 .seat.ok .box { background: var(--ok); border-color: var(--ok); } .seat.ass .box { background: var(--bad); border-color: var(--bad); }
 .seat.ok .nome { color: var(--muted); } .seat.ass .nome { text-decoration: line-through; color: var(--muted); }
