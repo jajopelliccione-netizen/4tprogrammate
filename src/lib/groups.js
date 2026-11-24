@@ -73,6 +73,14 @@ export function subOf(groups, g) {
   return autoSub(groups, g);
 }
 
+// Se `sid` siede nel gruppo `gid` ed è il sostituto del gruppo PRECEDENTE, ritorna quel gruppo.
+// Chi è in questa situazione non può cambiare gruppo: prima deve passare il ruolo di sostituto.
+export function previousGroupIfSub(groups, gid, sid) {
+  const idx = groups.findIndex((g) => g.id === gid);
+  if (idx <= 0 || !sid) return null;
+  return subOf(groups, groups[idx - 1]) === sid ? groups[idx - 1] : null;
+}
+
 // Segna lo stato di un posto (interrogato / in attesa). Ritorna { gid: nuovoDoc }.
 export function applyStatus(groups, gid, pos, status) {
   const g = clone(groups.find((x) => x.id === gid));

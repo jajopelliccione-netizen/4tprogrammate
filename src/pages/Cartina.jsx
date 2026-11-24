@@ -7,6 +7,7 @@ import GroupCard from '../components/GroupCard';
 import Modal from '../components/Modal';
 import Dashboard from '../components/Dashboard';
 import SwapPicker from '../components/SwapPicker';
+import SubBlock from '../components/SubBlock';
 import { formatDate } from '../lib/dates';
 import { ABSENT, DONE, WAIT } from '../lib/groups';
 import { createSwap, seatSwappable } from '../lib/swaps';
@@ -16,7 +17,7 @@ import { errMsg } from '../hooks';
 export default function Cartina() {
   const { isAdmin } = useAuth();
   const {
-    setPid, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming, nameOf,
+    setPid, subBlock, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming, nameOf,
   } = useData();
   const toast = useToast();
   const { setStatus, groupDone, absencePreview } = useMarking();
@@ -24,6 +25,7 @@ export default function Cartina() {
   const [openPid, setOpenPid] = useState(null);   // programmata aperta (null = tutte chiuse)
   const [target, setTarget] = useState(null);     // studente: { group, pos, sid } da confermare
   const [picker, setPicker] = useState(null);     // studente: pid per cui scegliere con chi scambiare
+  const [blockInfo, setBlockInfo] = useState(null);   // spiegazione: sei sostituto, non puoi cambiare gruppo
   const [mark, setMark] = useState(null);         // admin: { gid, pos } posto da segnare
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +47,11 @@ export default function Cartina() {
     if (!mySeat || !mySwappable || sid === mySid) return false;
     return seatSwappable(g, i, today);
   };
-  const onSeat = (group, pos) => (isAdmin ? setMark({ gid: group.id, pos }) : setTarget({ group, pos, sid: group.seats[pos] }));
+  const onSeat = (group, pos) => {
+    if (isAdmin) return setMark({ gid: group.id, pos });
+    const blk = mySeat ? subBlock(mySid, mySeat.gid) : null;
+    return blk ? setBlockInfo(blk) : setTarget({ group, pos, sid: group.seats[pos] });
+  };
 
   const alreadyAsked = target && [...outgoing, ...incoming].some((s) => s.status === 'pending' &&
     ((s.toSid === target.sid && s.fromSid === mySid) || (s.fromSid === target.sid && s.toSid === mySid)));
@@ -133,6 +139,8 @@ export default function Cartina() {
         <SwapPicker pid={picker} onClose={() => setPicker(null)}
           onPick={(t) => { setPicker(null); setTarget(t); }} />
       )}
+
+      {blockInfo && <SubBlock block={blockInfo} onClose={() => setBlockInfo(null)} />}
 
       {target && myGroup && (
         <Modal title="Chiedere uno scambio?" onClose={() => setTarget(null)}

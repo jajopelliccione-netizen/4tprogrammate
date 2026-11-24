@@ -3,7 +3,7 @@ import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/f
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { useToday } from '../hooks';
-import { findSeat, groupNumber, pidOf, sortGroups } from '../lib/groups';
+import { findSeat, groupNumber, pidOf, previousGroupIfSub, sortGroups } from '../lib/groups';
 import { setSwapStatus, swapValidNow } from '../lib/swaps';
 
 const Ctx = createContext(null);
@@ -81,6 +81,15 @@ export function DataProvider({ children }) {
     return g ? programmate.find((p) => p.id === pidOf(g))?.subject || '' : '';
   };
 
+  // Se `sid` (seduto nel gruppo `gid`) è il sostituto del gruppo prima, ritorna { prev, prog }:
+  // non può cambiare gruppo finché non passa il ruolo.
+  const subBlock = (sid, gid) => {
+    const g = groupsById[gid];
+    if (!g) return null;
+    const prev = previousGroupIfSub(allGroups.filter((x) => pidOf(x) === pidOf(g)), gid, sid);
+    return prev ? { prev, prog: programmate.find((p) => p.id === pidOf(g)) || { subject: '' } } : null;
+  };
+
   // Una richiesta in attesa è "valida" solo se i due posti sono ancora quelli e il giorno non è iniziato.
   const isLive = (sw) => sw.status === 'pending' && swapValidNow(sw, groupsById, today);
   const pendingIncoming = incoming.filter(isLive);
@@ -100,7 +109,7 @@ export function DataProvider({ children }) {
   const value = {
     today, subject: currentProg?.subject || '', programmate, currentPid, currentProg, setPid, allGroups, groupLabel, subjectOf,
     students, studentsById, nameOf, groups, groupsById, groupsLoaded: groupsRaw !== null && programmateRaw !== null, history,
-    rulesError, mySid, mySeat, incoming, outgoing, isLive, badge: pendingIncoming.length,
+    rulesError, subBlock, mySid, mySeat, incoming, outgoing, isLive, badge: pendingIncoming.length,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

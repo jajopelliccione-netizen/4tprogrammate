@@ -278,3 +278,5 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .hero-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .hero-link { background: #ffffff2e; border: 1px solid #ffffff55; color: #fff; min-height: 32px; padding: 4px 12px; font-size: .8rem; border-radius: 10px; }
 .hero-link:hover { background: #ffffff40; }
+.pickerlist .warn { color: #b45309; font-weight: 600; }
+.warnbox { background: #fffbeb; color: #78350f; border: 1px solid #fcd34d; border-radius: 14px; padding: 10px 12px; font-size: .88rem; } .warnbox p { margin: 0 0 8px; }

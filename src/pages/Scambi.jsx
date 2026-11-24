@@ -5,6 +5,7 @@ import { useData } from '../context/DataContext';
 import { useToast } from '../context/Toast';
 import { acceptSwap, setSwapStatus } from '../lib/swaps';
 import { colorOf } from '../components/GroupCard';
+import SubBlock, { SubBlockText } from '../components/SubBlock';
 import { formatDate } from '../lib/dates';
 import { errMsg } from '../hooks';
 
@@ -27,9 +28,10 @@ function Side({ who, gid, group, groupLabel }) {
 
 export default function Scambi() {
   const { isAdmin } = useAuth();
-  const { incoming, outgoing, nameOf, groupsById, today, isLive, groupLabel, subjectOf, mySid } = useData();
+  const { incoming, outgoing, nameOf, groupsById, today, isLive, groupLabel, subjectOf, mySid, subBlock } = useData();
   const toast = useToast();
   const [busy, setBusy] = useState('');
+  const [blockInfo, setBlockInfo] = useState(null);
   if (isAdmin) return <Navigate to="/" replace />;
 
   const run = async (id, fn, okMsg) => {
@@ -90,14 +92,24 @@ export default function Scambi() {
       {inPending.length === 0 && <p className="muted">Nessuna richiesta da gestire.</p>}
       {inPending.map((sw) => (
         <Card key={sw.id} sw={sw} actions={(
+          <>
+          {subBlock(mySid, sw.toGroup) && (
+            <div className="warnbox">
+              <SubBlockText block={subBlock(mySid, sw.toGroup)} />
+              <button className="small" onClick={() => setBlockInfo(subBlock(mySid, sw.toGroup))}>Passa il ruolo</button>
+            </div>
+          )}
           <div className="row">
-            <button className="primary" disabled={busy === sw.id}
+            <button className="primary" disabled={busy === sw.id || Boolean(subBlock(mySid, sw.toGroup))}
               onClick={() => run(sw.id, () => acceptSwap(sw.id, today), 'Scambio fatto! 🎉')}>Accetta</button>
             <button disabled={busy === sw.id}
               onClick={() => run(sw.id, () => setSwapStatus(sw.id, 'rejected'), 'Richiesta rifiutata.')}>Rifiuta</button>
           </div>
+          </>
         )} />
       ))}
+
+      {blockInfo && <SubBlock block={blockInfo} onClose={() => setBlockInfo(null)} />}
 
       <h2>Richieste inviate</h2>
       {outPending.length === 0 && <p className="muted">Nessuna richiesta in attesa.</p>}

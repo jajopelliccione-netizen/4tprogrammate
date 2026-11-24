@@ -44,6 +44,37 @@ service cloud.firestore {
       return !('startsAt' in g) || g.startsAt == null || request.time < g.startsAt;
     }
 
+    // ---- sostituti (usati da più punti) ------------------------------------------------------
+    // Il sostituto del gruppo N sta nel gruppo N+1.
+    function groupIdAt(g, n) {
+      return (pidOf(g) == '' ? '' : pidOf(g) + '_') + 'g' + (n < 10 ? '0' : '') + string(n);
+    }
+    function pendingAt(g, i) { return g.seats.size() > i && g.seats[i] != '' && g.status[i] == 'attesa'; }
+    function isPendingMember(g, sid) {
+      return (pendingAt(g, 0) && g.seats[0] == sid) || (pendingAt(g, 1) && g.seats[1] == sid)
+          || (pendingAt(g, 2) && g.seats[2] == sid) || (pendingAt(g, 3) && g.seats[3] == sid)
+          || (pendingAt(g, 4) && g.seats[4] == sid);
+    }
+    function firstPendingSeat(g, absent) {
+      return (pendingAt(g, 0) && !(g.seats[0] in absent)) ? g.seats[0]
+        : ((pendingAt(g, 1) && !(g.seats[1] in absent)) ? g.seats[1]
+        : ((pendingAt(g, 2) && !(g.seats[2] in absent)) ? g.seats[2]
+        : ((pendingAt(g, 3) && !(g.seats[3] in absent)) ? g.seats[3]
+        : ((pendingAt(g, 4) && !(g.seats[4] in absent)) ? g.seats[4] : ''))));
+    }
+    // Sostituto effettivo: quello scelto a mano (se valido) oppure il primo in attesa del gruppo dopo.
+    function effectiveSub(old, next) {
+      let manual = ('subId' in old) ? old.subId : '';
+      let absent = ('absentIds' in old) ? old.absentIds : [];
+      return (manual != '' && isPendingMember(next, manual)) ? manual : firstPendingSeat(next, absent);
+    }
+
+    // La persona che siede nel gruppo H è il sostituto effettivo del gruppo PRECEDENTE?
+    // In quel caso non può cambiare gruppo finché non passa il ruolo a un compagno del suo gruppo.
+    function isSubOfPrevious(h, sid) {
+      return h.number > 1 && effectiveSub(get(groupPath(groupIdAt(h, h.number - 1))).data, h) == sid;
+    }
+
     // ---------------------------------------------------------------- students --
     // Elenco pubblico dei nomi (serve alla schermata di login prima di accedere).
     // Non contiene nulla di segreto: l'email interna diventa pubblica solo dopo
@@ -142,28 +173,6 @@ service cloud.firestore {
       // ---- passaggio del ruolo di SOSTITUTO ------------------------------------------------
       // Il sostituto del gruppo N sta nel gruppo N+1. Può passare il ruolo SOLO a un'altra
       // persona del suo gruppo effettivo (N+1), ancora in attesa. Cambia solo il campo subId.
-      function groupIdAt(g, n) {
-        return (pidOf(g) == '' ? '' : pidOf(g) + '_') + 'g' + (n < 10 ? '0' : '') + string(n);
-      }
-      function pendingAt(g, i) { return g.seats.size() > i && g.seats[i] != '' && g.status[i] == 'attesa'; }
-      function isPendingMember(g, sid) {
-        return (pendingAt(g, 0) && g.seats[0] == sid) || (pendingAt(g, 1) && g.seats[1] == sid)
-            || (pendingAt(g, 2) && g.seats[2] == sid) || (pendingAt(g, 3) && g.seats[3] == sid)
-            || (pendingAt(g, 4) && g.seats[4] == sid);
-      }
-      function firstPendingSeat(g, absent) {
-        return (pendingAt(g, 0) && !(g.seats[0] in absent)) ? g.seats[0]
-          : ((pendingAt(g, 1) && !(g.seats[1] in absent)) ? g.seats[1]
-          : ((pendingAt(g, 2) && !(g.seats[2] in absent)) ? g.seats[2]
-          : ((pendingAt(g, 3) && !(g.seats[3] in absent)) ? g.seats[3]
-          : ((pendingAt(g, 4) && !(g.seats[4] in absent)) ? g.seats[4] : ''))));
-      }
-      // Sostituto effettivo: quello scelto a mano (se valido) oppure il primo in attesa del gruppo dopo.
-      function effectiveSub(old, next) {
-        let manual = ('subId' in old) ? old.subId : '';
-        let absent = ('absentIds' in old) ? old.absentIds : [];
-        return (manual != '' && isPendingMember(next, manual)) ? manual : firstPendingSeat(next, absent);
-      }
       function studentSubTransfer(gid) {
         let d = request.resource.data;
         let old = resource.data;
@@ -250,7 +259,9 @@ service cloud.firestore {
           && d.fromPos is int && d.toPos is int
           && d.fromPos >= 0 && d.fromPos < 5 && d.toPos >= 0 && d.toPos < 5
           && d.createdAt == request.time
-          && swapValid(d);
+          && swapValid(d)
+          // chi è sostituto del gruppo prima deve prima passare il ruolo
+          && !isSubOfPrevious(get(groupPath(d.fromGroup)).data, d.fromSid);
       }
 
       function studentSwapUpdate() {
@@ -264,6 +275,8 @@ service cloud.firestore {
           && (
             // il destinatario ACCETTA: valido solo se i gruppi sono scambiati nello stesso batch
             (old.toSid == me && nw.status == 'accepted' && swapValid(old)
+              && !isSubOfPrevious(get(groupPath(old.fromGroup)).data, old.fromSid)
+              && !isSubOfPrevious(get(groupPath(old.toGroup)).data, old.toSid)
               && getAfter(groupPath(old.fromGroup)).data.seats[old.fromPos] == old.toSid
               && getAfter(groupPath(old.toGroup)).data.seats[old.toPos] == old.fromSid)
             // il destinatario RIFIUTA

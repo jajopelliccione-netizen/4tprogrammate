@@ -49,8 +49,11 @@ async function seed() {
     await setDoc(doc(db, 'invites', TOKEN), {
       studentId: 'N', authEmail: EMAIL, used: false,
     });
-    await setDoc(doc(db, 'groups', 'g01'), group(1, ['A', 'C', '', '']));
-    await setDoc(doc(db, 'groups', 'g02'), group(2, ['B', '', '', '']));
+    // Z è il sostituto (scelto a mano) di g01: così B (g02) NON è sostituto e gli scambi di base restano liberi
+    await setDoc(doc(db, 'groups', 'g01'), group(1, ['A', 'C', '', ''], { subId: 'Z' }));
+    await setDoc(doc(db, 'groups', 'g02'), group(2, ['B', 'Z', '', '']));
+    await setDoc(doc(db, 'users', 'uidZ'), { role: 'student', studentId: 'Z', inviteToken: 'x' });
+    await setDoc(doc(db, 'students', 'Z'), { name: 'Z', activated: true, uid: 'uidZ', authEmail: 'Z@x.it', excluded: false, order: 9 });
     await setDoc(doc(db, 'groups', 'g03'), group(3, ['D', 'E', '', ''], { startsAt: past(), date: '2000-01-01' }));
   });
 }
@@ -200,9 +203,9 @@ test('richiesta a uno studente che NON ha ancora attivato l\'app: la vede e risp
   await env.withSecurityRulesDisabled(async (ctx) => {
     const adb = ctx.firestore();
     await setDoc(doc(adb, 'groups', 'g04'), { number: 4, date: '2099-01-01', startsAt: future(),
-      seats: ['N', '', '', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false, pid: '' });
+      seats: ['M', 'N', '', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false, pid: '' });
   });
-  await assertSucceeds(setDoc(doc(as(UA), 'swaps', 'sn'), swapData({ toSid: 'N', toGroup: 'g04', toPos: 0 })));
+  await assertSucceeds(setDoc(doc(as(UA), 'swaps', 'sn'), swapData({ toSid: 'N', toGroup: 'g04', toPos: 1 })));
   // N si iscrive più tardi (simulato con rules disabled) e poi risponde
   await env.withSecurityRulesDisabled(async (ctx) => {
     const adb = ctx.firestore();
@@ -215,9 +218,9 @@ test('richiesta a uno studente che NON ha ancora attivato l\'app: la vede e risp
   const b = writeBatch(n);
   b.update(doc(n, 'swaps', 'sn'), { status: 'accepted', resolvedAt: serverTimestamp() });
   b.update(doc(n, 'groups', 'g01'), { seats: ['N', 'C', '', ''], lastSwapId: 'sn' });
-  b.update(doc(n, 'groups', 'g04'), { seats: ['A', '', '', ''], lastSwapId: 'sn' });
+  b.update(doc(n, 'groups', 'g04'), { seats: ['M', 'A', '', ''], lastSwapId: 'sn' });
   b.set(doc(n, 'history', 'sn'), { type: 'swap', swapId: 'sn', at: serverTimestamp(), fromSid: 'A', toSid: 'N',
-    fromGroup: 'g01', fromPos: 0, toGroup: 'g04', toPos: 0 });
+    fromGroup: 'g01', fromPos: 0, toGroup: 'g04', toPos: 1 });
   await assertSucceeds(b.commit());
 });
 
@@ -232,7 +235,7 @@ function acceptBatch(db, over = {}) {
   const b = writeBatch(db);
   b.update(doc(db, 'swaps', 's1'), { status: 'accepted', resolvedAt: serverTimestamp() });
   b.update(doc(db, 'groups', 'g01'), { seats: over.g1 || ['B', 'C', '', ''], lastSwapId: 's1' });
-  b.update(doc(db, 'groups', 'g02'), { seats: over.g2 || ['A', '', '', ''], lastSwapId: 's1' });
+  b.update(doc(db, 'groups', 'g02'), { seats: over.g2 || ['A', 'Z', '', ''], lastSwapId: 's1' });
   if (!over.noHistory) {
     b.set(doc(db, 'history', 's1'), {
       type: 'swap', swapId: 's1', at: serverTimestamp(), fromSid: 'A', toSid: 'B',
@@ -353,6 +356,8 @@ test('gruppo da 5 persone: scambio sul 5° posto riuscito, e 5° posto non manom
       status: ['attesa', 'attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false,
     });
     await updateDoc(doc(adb, 'groups', 'g01'), { seats: ['A', 'H', '', ''] });
+    await setDoc(doc(adb, 'groups', 'g04'), { number: 4, pid: '', date: '2099-01-01', startsAt: future(),
+      seats: ['P', '', '', ''], status: ['attesa', 'attesa', 'attesa', 'attesa'], subId: 'D', absentIds: [], done: false });
   });
   // A (g01 pos0) chiede lo scambio con C (g05 pos4)
   await assertSucceeds(setDoc(doc(as(UA), 'swaps', 's5'),
@@ -448,4 +453,31 @@ test('sostituto manuale: solo lui può passare il ruolo; il nuovo sostituto può
   await assertFails(updateDoc(doc(as(UB), 'groups', 'g01'), { subId: 'D' }));
   // E sì → passa a B
   await assertSucceeds(updateDoc(doc(as('uidE'), 'groups', 'g01'), { subId: 'B' }));
+});
+
+// ---------------------------------- chi è sostituto del gruppo prima non può cambiare gruppo ----
+test('sostituto del gruppo prima: non può chiedere uno scambio finché non passa il ruolo', async () => {
+  // Z (g02 pos1) è il sostituto di g01 → chiede di scambiare con C (g01 pos1)
+  const data = swapData({ fromSid: 'Z', fromGroup: 'g02', fromPos: 1, toSid: 'C', toGroup: 'g01', toPos: 1 });
+  await assertFails(setDoc(doc(as('uidZ'), 'swaps', 'sz'), data));
+  // Z passa il ruolo a B (stesso gruppo): ora può
+  await assertSucceeds(updateDoc(doc(as('uidZ'), 'groups', 'g01'), { subId: 'B' }));
+  await assertSucceeds(setDoc(doc(as('uidZ'), 'swaps', 'sz2'), data));
+});
+
+test('sostituto del gruppo prima: non può nemmeno ACCETTARE finché non passa il ruolo', async () => {
+  // A (g01 pos0) chiede a Z (sostituto di g01, siede in g02 pos1)
+  await assertSucceeds(setDoc(doc(as(UA), 'swaps', 'sa'), swapData({ toSid: 'Z', toGroup: 'g02', toPos: 1 })));
+  const accept = (db) => {
+    const b = writeBatch(db);
+    b.update(doc(db, 'swaps', 'sa'), { status: 'accepted', resolvedAt: serverTimestamp() });
+    b.update(doc(db, 'groups', 'g01'), { seats: ['Z', 'C', '', ''], lastSwapId: 'sa' });
+    b.update(doc(db, 'groups', 'g02'), { seats: ['B', 'A', '', ''], lastSwapId: 'sa' });
+    b.set(doc(db, 'history', 'sa'), { type: 'swap', swapId: 'sa', at: serverTimestamp(), fromSid: 'A', toSid: 'Z',
+      fromGroup: 'g01', fromPos: 0, toGroup: 'g02', toPos: 1 });
+    return b;
+  };
+  await assertFails(accept(as('uidZ')).commit());
+  await assertSucceeds(updateDoc(doc(as('uidZ'), 'groups', 'g01'), { subId: 'B' }));  // passa il ruolo
+  await assertSucceeds(accept(as('uidZ')).commit());
 });

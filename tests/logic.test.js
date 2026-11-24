@@ -225,3 +225,14 @@ test('sostituto: solo dal gruppo successivo, mai da altri gruppi', () => {
   gs[0].subId = 'a'; // uno del proprio gruppo → ignorato
   assert.equal(subOf(gs, gs[0]), 'e');
 });
+
+import { previousGroupIfSub } from '../src/lib/groups.js';
+test('sostituto del gruppo prima: non può cambiare gruppo', () => {
+  const gs = base();   // g01 a b c d | g02 e f g h | g03 i j
+  assert.equal(previousGroupIfSub(gs, 'g02', 'e').id, 'g01');   // e è il sostituto auto di g01
+  assert.equal(previousGroupIfSub(gs, 'g02', 'f'), null);
+  assert.equal(previousGroupIfSub(gs, 'g01', 'a'), null);         // il primo gruppo non ha un "prima"
+  gs[0].subId = 'g';                                               // sostituto manuale = g
+  assert.equal(previousGroupIfSub(gs, 'g02', 'e'), null);
+  assert.equal(previousGroupIfSub(gs, 'g02', 'g').id, 'g01');
+});
