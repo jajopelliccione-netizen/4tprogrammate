@@ -62,14 +62,13 @@ export function autoSub(groups, g) {
   return '';
 }
 
-// Sostituto effettivo: quello scelto a mano (se valido) oppure l'automatico.
+// Sostituto effettivo: quello scelto a mano (solo se è del gruppo SUCCESSIVO e ancora in attesa)
+// oppure l'automatico. Mai persone di altri gruppi.
 export function subOf(groups, g) {
-  if (g.subId) {
-    const seat = findSeat(groups, g.subId);
-    if (seat && seat.gid !== g.id) {
-      const sg = groups.find((x) => x.id === seat.gid);
-      if (sg.status[seat.pos] === WAIT) return g.subId;
-    }
+  const next = groups[groups.findIndex((x) => x.id === g.id) + 1];
+  if (g.subId && next) {
+    const pos = next.seats.indexOf(g.subId);
+    if (pos >= 0 && next.status[pos] === WAIT) return g.subId;
   }
   return autoSub(groups, g);
 }

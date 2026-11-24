@@ -215,3 +215,13 @@ test('assenze: un solo sostituto per gruppo → un solo scambio', () => {
   assert.deepEqual(second.changed.g01.seats, ['a', 'e', 'c', 'd']);
   assert.deepEqual(Object.keys(second.changed), ['g01']);
 });
+
+test('sostituto: solo dal gruppo successivo, mai da altri gruppi', () => {
+  const gs = base();
+  gs[0].subId = 'i'; // 'i' è nel gruppo 3, non nel successivo → ignorato, vale l'automatico
+  assert.equal(subOf(gs, gs[0]), 'e');
+  gs[0].subId = 'g'; // gruppo 2 ✓
+  assert.equal(subOf(gs, gs[0]), 'g');
+  gs[0].subId = 'a'; // uno del proprio gruppo → ignorato
+  assert.equal(subOf(gs, gs[0]), 'e');
+});

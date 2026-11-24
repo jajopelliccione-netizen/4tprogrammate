@@ -150,7 +150,11 @@ export default function Gruppi() {
 
   const sel = picked ? studentsById[picked] : null;
   const lastNumber = groups.length ? Math.max(...groups.map((x) => x.number)) : 0;
-  const subCandidates = (g) => groups.filter((x) => x.id !== g.id).flatMap((x) => x.seats.filter(Boolean));
+  // il sostituto può essere solo una persona del gruppo SUCCESSIVO
+  const subCandidates = (g) => {
+    const next = groups[groups.findIndex((x) => x.id === g.id) + 1];
+    return next ? next.seats.filter(Boolean) : [];
+  };
 
   return (
     <DndContext sensors={sensors} onDragStart={(e) => setActive(String(e.active.id).replace('stu:', ''))}
