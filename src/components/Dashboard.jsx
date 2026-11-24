@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { formatDate } from '../lib/dates';
 import { WAIT, pidOf } from '../lib/groups';
 import { colorOf } from './GroupCard';
+import SubTransfer from './SubTransfer';
 import { myEntries, mySubstitutions, nextEntry, progSummary, whenLabel } from '../lib/dashboard';
 
 const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'assente' };
@@ -10,6 +12,7 @@ const STATO = { attesa: 'da fare', interrogato: 'interrogato ✓', assente: 'ass
 // Parte alta della Cartina: prossima interrogazione, tutte le tue, riepilogo delle materie.
 export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
   const { allGroups, programmate, mySid, today, nameOf, currentPid, incoming, isLive, subjectOf, groupLabel } = useData();
+  const [passSub, setPassSub] = useState(null);
   const richieste = mySid ? incoming.filter(isLive) : [];
   const entries = mySid ? myEntries(allGroups, programmate, mySid, today) : [];
   const next = nextEntry(entries);
@@ -38,7 +41,10 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
                 </div>
               )}
               {subs.length > 0 && (
-                <p className="hero-note">Sei anche sostituto: {subs[0].prog.subject}, Gruppo {subs[0].group.number}{subs[0].days !== null ? ` (${whenLabel(subs[0].days)})` : ''}</p>
+                <p className="hero-note">
+                  <span>Sei anche sostituto: {subs[0].prog.subject}, Gruppo {subs[0].group.number}{subs[0].days !== null ? ` (${whenLabel(subs[0].days)})` : ''}</span>
+                  <button className="hero-link" onClick={() => setPassSub(subs[0])}>Passa il ruolo</button>
+                </p>
               )}
             </>
           ) : (
@@ -127,6 +133,7 @@ export default function Dashboard({ openPid, onToggle, renderOpen, onSwap }) {
           );
         })}
       </div>
+          {passSub && <SubTransfer entry={passSub} onClose={() => setPassSub(null)} />}
     </>
   );
 }

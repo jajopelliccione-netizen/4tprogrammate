@@ -130,13 +130,53 @@ service cloud.firestore {
     match /groups/{gid} {
       allow read: if isMember();
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || studentSwapWrite(gid);
+      allow update: if isAdmin() || studentSubTransfer(gid) || studentSwapWrite(gid);
 
       // Posto dopo lo scambio: j == posto di chi ha chiesto → ci va il destinatario
       // e viceversa; tutti gli altri posti restano uguali.
       function expSeat(oldSeats, gid, sw, j) {
         return (gid == sw.fromGroup && j == sw.fromPos) ? sw.toSid
              : ((gid == sw.toGroup && j == sw.toPos) ? sw.fromSid : oldSeats[j]);
+      }
+
+      // ---- passaggio del ruolo di SOSTITUTO ------------------------------------------------
+      // Il sostituto del gruppo N sta nel gruppo N+1. Può passare il ruolo SOLO a un'altra
+      // persona del suo gruppo effettivo (N+1), ancora in attesa. Cambia solo il campo subId.
+      function groupIdAt(g, n) {
+        return (pidOf(g) == '' ? '' : pidOf(g) + '_') + 'g' + (n < 10 ? '0' : '') + string(n);
+      }
+      function pendingAt(g, i) { return g.seats.size() > i && g.seats[i] != '' && g.status[i] == 'attesa'; }
+      function isPendingMember(g, sid) {
+        return (pendingAt(g, 0) && g.seats[0] == sid) || (pendingAt(g, 1) && g.seats[1] == sid)
+            || (pendingAt(g, 2) && g.seats[2] == sid) || (pendingAt(g, 3) && g.seats[3] == sid)
+            || (pendingAt(g, 4) && g.seats[4] == sid);
+      }
+      function firstPendingSeat(g, absent) {
+        return (pendingAt(g, 0) && !(g.seats[0] in absent)) ? g.seats[0]
+          : ((pendingAt(g, 1) && !(g.seats[1] in absent)) ? g.seats[1]
+          : ((pendingAt(g, 2) && !(g.seats[2] in absent)) ? g.seats[2]
+          : ((pendingAt(g, 3) && !(g.seats[3] in absent)) ? g.seats[3]
+          : ((pendingAt(g, 4) && !(g.seats[4] in absent)) ? g.seats[4] : ''))));
+      }
+      // Sostituto effettivo: quello scelto a mano (se valido) oppure il primo in attesa del gruppo dopo.
+      function effectiveSub(old, next) {
+        let manual = ('subId' in old) ? old.subId : '';
+        let absent = ('absentIds' in old) ? old.absentIds : [];
+        return (manual != '' && isPendingMember(next, manual)) ? manual : firstPendingSeat(next, absent);
+      }
+      function studentSubTransfer(gid) {
+        let d = request.resource.data;
+        let old = resource.data;
+        let next = get(groupPath(groupIdAt(old, old.number + 1))).data;
+        let me = profile().studentId;
+        return isStudent()
+          && d.diff(old).affectedKeys().hasOnly(['subId'])
+          && d.subId is string && d.subId != me
+          && pidOf(next) == pidOf(old)
+          && old.done != true
+          && dayNotStarted(old)
+          && effectiveSub(old, next) == me
+          && isPendingMember(next, d.subId);
       }
 
       function studentSwapWrite(gid) {

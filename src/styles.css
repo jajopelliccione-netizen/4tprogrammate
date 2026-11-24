@@ -275,3 +275,6 @@ details.sec[open] > summary { border-bottom: 1px solid var(--line); margin-botto
 .reqlist { height: auto; max-height: 128px; min-height: 0; padding: 0 12px 12px; }
 .reqempty { margin: 0; padding: 0 4px 2px; text-align: left; color: var(--muted); font-size: .88rem; }
 .main h2 { margin-top: 1.1rem; font-size: 1.05rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: .78rem; }
+.hero-note { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.hero-link { background: #ffffff2e; border: 1px solid #ffffff55; color: #fff; min-height: 32px; padding: 4px 12px; font-size: .8rem; border-radius: 10px; }
+.hero-link:hover { background: #ffffff40; }
