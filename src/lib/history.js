@@ -9,7 +9,7 @@ export function entryText(e, nameOf, gl) {
     case 'absenza':
       return e.subSid
         ? `${nameOf(e.sid)} assente (${g(e.group)}). Al suo posto ${nameOf(e.subSid)}; ${nameOf(e.sid)} passa nel ${g(e.toGroup)}.`
-        : `${nameOf(e.sid)} assente (${g(e.group)}). Nessun sostituto disponibile.`;
+        : `${nameOf(e.sid)} assente (${g(e.group)}). ${e.subUsed ? 'Il sostituto era già stato usato: nessun altro scambio.' : 'Nessun sostituto disponibile.'}`;
     case 'interrogato':
       return `${nameOf(e.sid)} interrogato (${g(e.group)})`;
     case 'attesa':

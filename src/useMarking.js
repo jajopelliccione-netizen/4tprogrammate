@@ -29,6 +29,7 @@ export function useMarking() {
     const sid = g.seats[pos];
     const { changed, info } = applyAbsence(groups, gid, pos);
     void changed;
+    if (info.subUsed) return `Il sostituto del gruppo è già stato usato: ${nameOf(sid)} resta segnato assente (un solo scambio per gruppo).`;
     if (!info.subSid) return `Nessun sostituto disponibile: ${nameOf(sid)} resta segnato assente.`;
     return `Al posto di ${nameOf(sid)} entra ${nameOf(info.subSid)} (sostituto). ${nameOf(sid)} va nel ${groupLabel(info.toGroup)}, al posto di ${nameOf(info.subSid)}.`;
   }
@@ -40,7 +41,7 @@ export function useMarking() {
         const { changed, info } = applyAbsence(groups, gid, pos);
         await commit(changed, info, info.subSid
           ? `${nameOf(sid)} assente: entra ${nameOf(info.subSid)}, ${nameOf(sid)} passa nel gruppo successivo.`
-          : `${nameOf(sid)} assente (nessun sostituto).`);
+          : `${nameOf(sid)} assente (${info.subUsed ? 'sostituto già usato, nessun altro scambio' : 'nessun sostituto'}).`);
       } else {
         await commit(applyStatus(groups, gid, pos, status),
           { type: status === DONE ? 'interrogato' : 'attesa', sid, group: gid },

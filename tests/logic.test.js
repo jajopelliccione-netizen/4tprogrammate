@@ -202,3 +202,16 @@ test('dashboard: riepilogo materia', () => {
   assert.equal(s.next.number, 3);
   assert.equal(s.nextDays, 3);
 });
+
+test('assenze: un solo sostituto per gruppo → un solo scambio', () => {
+  const gs = base();
+  const first = applyAbsence(gs, 'g01', 1); // b assente → entra e, b va in g02
+  assert.equal(first.changed.g01.subUsed, true);
+  const after = gs.map((g) => (first.changed[g.id] ? { id: g.id, ...first.changed[g.id] } : g));
+  const second = applyAbsence(after, 'g01', 2); // anche c assente: nessun altro scambio
+  assert.equal(second.info.subSid, null);
+  assert.equal(second.info.subUsed, true);
+  assert.equal(second.changed.g01.status[2], ABSENT);
+  assert.deepEqual(second.changed.g01.seats, ['a', 'e', 'c', 'd']);
+  assert.deepEqual(Object.keys(second.changed), ['g01']);
+});

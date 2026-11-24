@@ -57,7 +57,7 @@ export default function Segna() {
           </li>
         ))}
       </ul>
-      <p className="hint">Se segni un assente, il sostituto ({sub ? nameOf(sub) : 'nessuno'}) prende il suo posto e l'assente va al posto del sostituto.</p>
+      <p className="hint">Se segni un assente, il sostituto ({sub ? nameOf(sub) : 'nessuno'}) prende il suo posto e l'assente va al posto del sostituto. Il sostituto è uno solo per gruppo: un secondo assente non viene sostituito.</p>
       <button disabled={busy || g.done} onClick={() => act(() => groupDone(gid))}>Segna tutto il gruppo come interrogato</button>
 
       <div className="undo">

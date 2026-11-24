@@ -19,6 +19,7 @@ export const emptyGroup = (number, extra = {}) => ({
   status: Array(SEATS).fill(WAIT),
   subId: '',
   absentIds: [],
+  subUsed: false,
   done: false,
   ...extra,
 });
@@ -95,10 +96,13 @@ export function applyAbsence(groups, gid, pos) {
   const g = clone(groups.find((x) => x.id === gid));
   const absentSid = g.seats[pos];
   const subSid = subOf(groups, groups.find((x) => x.id === gid));
-  const info = { type: 'absenza', sid: absentSid, group: gid, subSid: null, toGroup: null };
+  const info = { type: 'absenza', sid: absentSid, group: gid, subSid: null, toGroup: null, subUsed: false };
   g.absentIds = Array.from(new Set([...g.absentIds, absentSid]));
 
-  const subSeat = subSid ? findSeat(groups, subSid) : null;
+  // Il sostituto è UNO solo per gruppo: se è già stato usato per un altro assente, niente secondo scambio.
+  const alreadyUsed = Boolean(g.subUsed);
+  const subSeat = !alreadyUsed && subSid ? findSeat(groups, subSid) : null;
+  if (alreadyUsed) info.subUsed = true;
   if (!subSeat || subSeat.gid === gid) {
     g.status[pos] = ABSENT;
     return { changed: { [gid]: finalize(g) }, info };
@@ -109,6 +113,7 @@ export function applyAbsence(groups, gid, pos) {
   h.seats[subSeat.pos] = absentSid;
   h.status[subSeat.pos] = WAIT;
   if (g.subId === subSid) g.subId = '';
+  g.subUsed = true;
   info.subSid = subSid;
   info.toGroup = h.id;
   return { changed: { [gid]: finalize(g), [h.id]: finalize(h) }, info };
