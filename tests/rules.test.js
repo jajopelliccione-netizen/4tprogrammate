@@ -318,3 +318,40 @@ test('scambio dentro lo stesso gruppo', async () => {
   });
   await assertSucceeds(b.commit());
 });
+
+// ---------------------------------------------------------- gruppo da 5 ----
+test('gruppo da 5 persone: scambio sul 5° posto riuscito, e 5° posto non manomettibile', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const adb = ctx.firestore();
+    await setDoc(doc(adb, 'groups', 'g05'), {
+      number: 5, date: '2099-01-01', startsAt: future(), seats: ['D', 'E', 'F', 'G', 'C'],
+      status: ['attesa', 'attesa', 'attesa', 'attesa', 'attesa'], subId: '', absentIds: [], done: false,
+    });
+    await updateDoc(doc(adb, 'groups', 'g01'), { seats: ['A', 'H', '', ''] });
+  });
+  // A (g01 pos0) chiede lo scambio con C (g05 pos4)
+  await assertSucceeds(setDoc(doc(as(UA), 'swaps', 's5'),
+    swapData({ toUid: UC, toSid: 'C', toGroup: 'g05', toPos: 4 })));
+  const dbc = as(UC);
+  const b = writeBatch(dbc);
+  b.update(doc(dbc, 'swaps', 's5'), { status: 'accepted', resolvedAt: serverTimestamp() });
+  b.update(doc(dbc, 'groups', 'g01'), { seats: ['C', 'H', '', ''], lastSwapId: 's5' });
+  b.update(doc(dbc, 'groups', 'g05'), { seats: ['D', 'E', 'F', 'G', 'X'], lastSwapId: 's5' }); // sbagliato
+  await assertFails(b.commit());
+  const b2 = writeBatch(dbc);
+  b2.update(doc(dbc, 'swaps', 's5'), { status: 'accepted', resolvedAt: serverTimestamp() });
+  b2.update(doc(dbc, 'groups', 'g01'), { seats: ['C', 'H', '', ''], lastSwapId: 's5' });
+  b2.update(doc(dbc, 'groups', 'g05'), { seats: ['D', 'E', 'F', 'G', 'A'], lastSwapId: 's5' });
+  b2.set(doc(dbc, 'history', 's5'), {
+    type: 'swap', swapId: 's5', at: serverTimestamp(), fromSid: 'A', toSid: 'C',
+    fromGroup: 'g01', fromPos: 0, toGroup: 'g05', toPos: 4,
+  });
+  await assertSucceeds(b2.commit());
+});
+
+test('config (materia): la legge chi ha un account, la scrive solo l\'admin', async () => {
+  await assertSucceeds(setDoc(doc(as(ADMIN), 'config', 'main'), { subject: 'Italiano' }));
+  await assertSucceeds(getDoc(doc(as(UA), 'config', 'main')));
+  await assertFails(setDoc(doc(as(UA), 'config', 'main'), { subject: 'Altro' }));
+  await assertFails(getDoc(doc(as(UX), 'config', 'main')));
+});

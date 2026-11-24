@@ -11,7 +11,7 @@ import { errMsg } from '../hooks';
 
 export default function Cartina() {
   const { user, isAdmin } = useAuth();
-  const { groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
+  const { subject, groups, groupsLoaded, studentsById, today, mySid, mySeat, groupsById, outgoing, incoming } = useData();
   const toast = useToast();
   const gridRef = useRef(null);
   const [target, setTarget] = useState(null); // { group, pos }
@@ -65,6 +65,7 @@ export default function Cartina() {
 
   return (
     <>
+      <h2 className="titolo">Interrogazioni programmate{subject && <> · <b>{subject}</b></>} <small>· 4T SSA</small></h2>
       {mySid && (
         <div className="mybox">
           {mySeat ? (

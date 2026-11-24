@@ -115,3 +115,31 @@ test('scambio: validità lato client come le regole', () => {
   assert.ok(!swapValidNow(sw, byId, '2030-01-01'), 'posto cambiato → decade');
   assert.ok(!seatSwappable(g1, 2, '2030-01-01'), 'posto vuoto');
 });
+
+// ---- import gruppi da testo ----
+import { buildImport, parseGroupsText } from '../src/lib/importGroups.js';
+
+const classe = ['Altobelli Andrea', 'Candelotti Rebecca', 'Crisanti Davide', 'Guzzardi Eva', 'Maino Giorgia',
+  'Ostili Sara', 'Pernici Alessandro', 'Perricone Adriano', 'Pudota Paula', 'Sciumè Elia Maria',
+  'Torres', 'Wang Coco', 'Tasmi Mawla Raisa'].map((name, i) => ({ id: `s${i}`, name }));
+
+test('import da testo: cognome o nome, accenti, sostituto, gruppo da 5', () => {
+  const txt = `Gruppo 1: Tasmi, Sciume, Perricone, Maino | Sostituto: Guzzardi
+Gruppo 2: Ostili, Pernici, Candelotti, Guzzardi
+Gruppo 5: Torres, Paula, Crisanti, Coco, Altobelli`;
+  const { groups, errors } = parseGroupsText(txt, classe);
+  assert.deepEqual(errors, []);
+  assert.equal(groups[0].subId, 's3');
+  assert.equal(groups[2].seats.length, 5);
+  const { changed, deleted } = buildImport(groups, [{ id: 'g06', number: 6, seats: ['', '', '', ''] }]);
+  assert.equal(changed.g05.seats[4], 's0');
+  assert.equal(changed.g05.status.length, 5);
+  assert.deepEqual(deleted, ['g06']);
+});
+
+test('import: errori per nome sconosciuto, doppioni e troppi posti', () => {
+  const r = parseGroupsText('Gruppo 1: Rossi, Maino\nGruppo 2: Maino, Gallo', classe);
+  assert.ok(r.errors.some((e) => e.includes('Rossi')));
+  assert.ok(r.errors.some((e) => e.includes('già nel gruppo 1')));
+  assert.ok(parseGroupsText('Gruppo 1: a,b,c,d,e,f', classe).errors.length > 0);
+});

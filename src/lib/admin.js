@@ -1,6 +1,6 @@
 // Azioni dell'amministratore (scrivono su Firestore con batch atomici).
 import {
-  collection, deleteDoc, doc, serverTimestamp, updateDoc, writeBatch,
+  collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { newInternalEmail, newToken } from './tokens';
@@ -150,3 +150,5 @@ export async function copyText(text) {
     return ok;
   }
 }
+
+export const setSubject = (subject) => setDoc(doc(db, 'config', 'main'), { subject: subject.trim() }, { merge: true });

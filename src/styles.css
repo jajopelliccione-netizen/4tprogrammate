@@ -97,3 +97,4 @@ button.seat-in { cursor: pointer; } button.seat-in:active { background: #0001; }
   .gcard.oggi { box-shadow: none; transform: none; } .grid { grid-template-columns: repeat(3, 1fr); }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+.titolo { margin: 2px 0 10px; } .titolo small { font-weight: 400; }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { useToday } from '../hooks';
@@ -19,6 +19,7 @@ export function DataProvider({ children }) {
   const [students, setStudents] = useState([]);
   const [groupsRaw, setGroups] = useState(null);
   const [history, setHistory] = useState([]);
+  const [subject, setSubject] = useState('');
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
 
@@ -26,6 +27,7 @@ export function DataProvider({ children }) {
     const err = (e) => console.error(e);
     const subs = [
       onSnapshot(collection(db, 'students'), (s) => setStudents(s.docs.map(withId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))), err),
+      onSnapshot(doc(db, 'config', 'main'), (s) => setSubject(s.exists() ? s.data().subject || '' : ''), err),
       onSnapshot(collection(db, 'groups'), (s) => setGroups(s.docs.map(withId)), err),
       onSnapshot(query(collection(db, 'history'), orderBy('at', 'desc'), limit(300)), (s) => setHistory(s.docs.map(withId)), err),
     ];
@@ -63,7 +65,7 @@ export function DataProvider({ children }) {
   }, [incoming, outgoing, groupsById, groupsRaw, today]);
 
   const value = {
-    today, students, studentsById, nameOf, groups, groupsById, groupsLoaded: groupsRaw !== null, history,
+    today, subject, students, studentsById, nameOf, groups, groupsById, groupsLoaded: groupsRaw !== null, history,
     mySid, mySeat, incoming, outgoing, isLive, badge: pendingIncoming.length,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

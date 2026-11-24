@@ -122,8 +122,8 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------ groups --
-    // seats[4]  : id degli studenti ('' = posto libero)
-    // status[4] : 'attesa' | 'interrogato' | 'assente'
+    // seats[4 o 5]  : id degli studenti ('' = posto libero)
+    // status[4 o 5] : 'attesa' | 'interrogato' | 'assente'
     match /groups/{gid} {
       allow read: if isMember();
       allow create, delete: if isAdmin();
@@ -157,11 +157,13 @@ service cloud.firestore {
           && old.done != true
           && dayNotStarted(old)
           // risultato esatto
-          && d.seats.size() == 4
+          && d.seats.size() == old.seats.size()
           && d.seats[0] == expSeat(old.seats, gid, sw, 0)
           && d.seats[1] == expSeat(old.seats, gid, sw, 1)
           && d.seats[2] == expSeat(old.seats, gid, sw, 2)
-          && d.seats[3] == expSeat(old.seats, gid, sw, 3);
+          && d.seats[3] == expSeat(old.seats, gid, sw, 3)
+          // un gruppo può avere un 5° posto
+          && (old.seats.size() < 5 || d.seats[4] == expSeat(old.seats, gid, sw, 4));
       }
     }
 
@@ -202,7 +204,7 @@ service cloud.firestore {
           && get(studentPath(d.toSid)).data.uid == d.toUid
           && d.fromGroup is string && d.toGroup is string
           && d.fromPos is int && d.toPos is int
-          && d.fromPos >= 0 && d.fromPos < 4 && d.toPos >= 0 && d.toPos < 4
+          && d.fromPos >= 0 && d.fromPos < 5 && d.toPos >= 0 && d.toPos < 5
           && d.createdAt == request.time
           && swapValid(d);
       }
@@ -228,6 +230,13 @@ service cloud.firestore {
             || ((old.fromUid == me || old.toUid == me) && nw.status == 'expired' && !swapValid(old))
           );
       }
+    }
+
+    // ------------------------------------------------------------------ config --
+    // Impostazioni generali (es. materia). Le legge chi ha un account, le scrive l'admin.
+    match /config/{id} {
+      allow read: if isMember();
+      allow write: if isAdmin();
     }
 
     // ----------------------------------------------------------------- history --

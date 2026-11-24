@@ -3,6 +3,7 @@ export const WAIT = 'attesa';
 export const DONE = 'interrogato';
 export const ABSENT = 'assente';
 export const SEATS = 4;
+export const MAX_SEATS = 5;
 
 export const groupId = (n) => `g${String(n).padStart(2, '0')}`;
 export const groupNumber = (id) => Number(String(id).replace(/^g/, '')) || 0;

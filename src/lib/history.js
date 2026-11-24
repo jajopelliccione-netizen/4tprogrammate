@@ -26,10 +26,14 @@ export function entryText(e, nameOf) {
       return `${nameOf(e.sid)} reinserito nelle programmate`;
     case 'distribuzione':
       return `Gruppi ridistribuiti automaticamente (${e.n} gruppi)`;
+    case 'importa':
+      return `Gruppi importati (${e.n} gruppi)`;
+    case 'posto':
+      return e.add ? `${g(e.group)}: aggiunto un posto` : `${g(e.group)}: tolto un posto`;
     default:
       return e.type;
   }
 }
 
 export const typeIcon = (t) =>
-  ({ swap: '🔄', absenza: '🚫', interrogato: '✅', attesa: '↩️', gruppo_fatto: '✅', sposta: '↔️', escluso: '⛔', reinserito: '➕', distribuzione: '🎲' }[t] || '•');
+  ({ swap: '🔄', absenza: '🚫', interrogato: '✅', attesa: '↩️', gruppo_fatto: '✅', sposta: '↔️', escluso: '⛔', reinserito: '➕', distribuzione: '🎲', importa: '📥', posto: '💺' }[t] || '•');
