@@ -494,3 +494,15 @@ test('sostituto del gruppo prima: non può nemmeno ACCETTARE finché non passa i
   await env.withSecurityRulesDisabled(async (ctx) => { await updateDoc(doc(ctx.firestore(), 'groups', 'g01'), { subId: 'B' }); });  // ruolo passato (accettato)
   await assertSucceeds(accept(as('uidZ')).commit());
 });
+
+test('programmata senza sostituti: nessuno è sostituto, quindi nessun blocco e nessun passaggio di ruolo', async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await updateDoc(doc(ctx.firestore(), 'groups', 'g01'), { noSub: true, subId: '' });
+  });
+  // B è il 1° del gruppo dopo ma qui non ci sono sostituti: A↔B si può chiedere, e Z (che sarebbe sub) non è bloccato
+  await assertSucceeds(setDoc(doc(as(UA), 'swaps', 'sn1'), swapData()));
+  const data = swapData({ fromSid: 'Z', fromGroup: 'g02', fromPos: 1, toSid: 'C', toGroup: 'g01', toPos: 1 });
+  await assertSucceeds(setDoc(doc(as('uidZ'), 'swaps', 'sn2'), data));
+  // e non si può chiedere di passare un ruolo che non esiste
+  await assertFails(setDoc(doc(as('uidZ'), 'subRequests', 'x'), { gid: 'g01', fromSid: 'Z', toSid: 'B', status: 'pending', createdAt: serverTimestamp() }));
+});

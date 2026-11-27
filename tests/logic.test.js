@@ -236,3 +236,24 @@ test('sostituto del gruppo prima: non può cambiare gruppo', () => {
   assert.equal(previousGroupIfSub(gs, 'g02', 'e'), null);
   assert.equal(previousGroupIfSub(gs, 'g02', 'g').id, 'g01');
 });
+
+test('programmata senza sostituti: nessun sostituto, l\'assente resta assente, nessun blocco', () => {
+  const gs = base().map((g) => ({ ...g, noSub: true }));
+  assert.equal(subOf(gs, gs[0]), '');
+  const { changed, info } = applyAbsence(gs, 'g01', 1);
+  assert.equal(info.subSid, null);
+  assert.equal(changed.g01.status[1], ABSENT);
+  assert.deepEqual(Object.keys(changed), ['g01']);
+  assert.equal(previousGroupIfSub(gs, 'g02', 'e'), null);
+});
+
+test('import con date e programmata senza sostituti', () => {
+  const classe2 = ['Papagno Azzurra', 'Tarallo Federico', 'Pernici Alessandro', 'Pelliccione Jacopo'].map((name, i) => ({ id: `s${i}`, name }));
+  const { groups, errors } = parseGroupsText('Gruppo 1 [2026-12-04]: Papagno, Tarallo, Pernici\nGruppo 2: Pelliccione', classe2);
+  assert.deepEqual(errors, []);
+  const { changed } = buildImport(groups, [], 'pA', { noSub: true });
+  assert.equal(changed.pA_g01.date, '2026-12-04');
+  assert.ok(changed.pA_g01.startsAt instanceof Date);
+  assert.equal(changed.pA_g01.noSub, true);
+  assert.equal(changed.pA_g02.date, null);
+});

@@ -63,10 +63,10 @@ export async function setGroupDates(groups, dates) {
   await batch.commit();
 }
 
-export const addGroup = (groups, pid = '') => {
+export const addGroup = (groups, pid = '', opts = {}) => {
   const n = groups.length ? Math.max(...groups.map((g) => g.number)) + 1 : 1;
   const batch = writeBatch(db);
-  batch.set(doc(db, 'groups', groupId(n, pid)), emptyGroup(n, { pid }));
+  batch.set(doc(db, 'groups', groupId(n, pid)), emptyGroup(n, { pid, noSub: Boolean(opts.noSub) }));
   return batch.commit();
 };
 
@@ -77,6 +77,13 @@ export async function createProgrammata(subject, programmate) {
   const order = programmate.reduce((m, p) => Math.max(m, p.order ?? 0), 0) + 1;
   await setDoc(ref, { subject: subject.trim(), order, createdAt: serverTimestamp() });
   return ref.id;
+}
+// Programmata senza sostituti (es. Arte): il flag va sulla programmata e su tutti i suoi gruppi.
+export async function setNoSub(pid, groups, value) {
+  const batch = writeBatch(db);
+  if (pid) batch.update(doc(db, 'programmate', pid), { noSub: value });
+  groups.forEach((g) => batch.update(doc(db, 'groups', g.id), { noSub: value, ...(value ? { subId: '' } : {}) }));
+  await batch.commit();
 }
 export const renameProgrammata = (id, subject) => updateDoc(doc(db, 'programmate', id), { subject: subject.trim() });
 export async function deleteProgrammata(id, groups) {

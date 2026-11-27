@@ -65,6 +65,9 @@ service cloud.firestore {
     }
     // Sostituto effettivo: quello scelto a mano (se valido) oppure il primo in attesa del gruppo dopo.
     function effectiveSub(old, next) {
+      return (('noSub' in old) && old.noSub == true) ? '' : effectiveSubAuto(old, next);
+    }
+    function effectiveSubAuto(old, next) {
       let manual = ('subId' in old) ? old.subId : '';
       let absent = ('absentIds' in old) ? old.absentIds : [];
       return (manual != '' && isPendingMember(next, manual)) ? manual : firstPendingSeat(next, absent);

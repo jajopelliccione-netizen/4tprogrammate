@@ -20,6 +20,7 @@ export const emptyGroup = (number, extra = {}) => ({
   subId: '',
   absentIds: [],
   subUsed: false,
+  noSub: false,   // programmata senza sostituti
   done: false,
   ...extra,
 });
@@ -65,6 +66,7 @@ export function autoSub(groups, g) {
 // Sostituto effettivo: quello scelto a mano (solo se è del gruppo SUCCESSIVO e ancora in attesa)
 // oppure l'automatico. Mai persone di altri gruppi.
 export function subOf(groups, g) {
+  if (g.noSub) return '';   // questa programmata non ha sostituti
   const next = groups[groups.findIndex((x) => x.id === g.id) + 1];
   if (g.subId && next) {
     const pos = next.seats.indexOf(g.subId);
@@ -159,7 +161,7 @@ export function moveStudent(groups, sid, target) {
 // Distribuzione automatica: riempie i gruppi 1..n con 4 studenti ciascuno, in ordine.
 // Se gli studenti avanzano (fino a 1 per gruppo) il 5° posto va agli ULTIMI gruppi:
 // es. 17 studenti in 4 gruppi → 4, 4, 4, 5. Mantiene le date dei gruppi già esistenti.
-export function distribute(studentIds, numGroups, existing, pid = '') {
+export function distribute(studentIds, numGroups, existing, pid = '', opts = {}) {
   const byNumber = new Map(existing.map((g) => [g.number, g]));
   const groups = {};
   const extra = studentIds.length - numGroups * SEATS;
@@ -173,6 +175,7 @@ export function distribute(studentIds, numGroups, existing, pid = '') {
     while (seats.length < SEATS) seats.push('');
     groups[groupId(n, pid)] = emptyGroup(n, {
       pid,
+      noSub: Boolean(opts.noSub),
       date: old?.date ?? null,
       startsAt: old?.startsAt ?? null,
       seats,

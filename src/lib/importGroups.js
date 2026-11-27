@@ -1,8 +1,11 @@
 // Importa i gruppi da testo (puro, senza Firebase).
 // Formato, una riga per gruppo:
 //   Gruppo 1: Tasmi, Sciumè, Perricone, Maino | Sostituto: Guzzardi
+// La data è facoltativa, tra parentesi quadre (AAAA-MM-GG):
+//   Gruppo 1 [2026-12-04]: Papagno, Tarallo, Pernici
 // I nomi si riconoscono anche con la sola parola del cognome (o del nome).
 import { MAX_SEATS, SEATS, WAIT, emptyGroup, finalize, groupId } from './groups.js';
+import { startsAtOf } from './dates.js';
 
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’'`]/g, '').trim();
 const tokens = (s) => norm(s).split(/\s+/).filter(Boolean);
@@ -25,10 +28,11 @@ export function parseGroupsText(text, students) {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
-    const m = line.match(/^gruppo\s*(\d+)\s*[:\-]\s*(.*)$/i);
+    const m = line.match(/^gruppo\s*(\d+)\s*(?:\[(\d{4}-\d{2}-\d{2})\])?\s*[:\-]\s*(.*)$/i);
     if (!m) { errors.push(`Riga non riconosciuta: "${line}"`); continue; }
     const number = Number(m[1]);
-    const [namesPart, subPart] = m[2].split('|');
+    const date = m[2] || null;
+    const [namesPart, subPart] = m[3].split('|');
     const names = namesPart.split(/[,;]/).map((x) => x.trim()).filter(Boolean);
     if (names.length > MAX_SEATS) { errors.push(`Gruppo ${number}: massimo ${MAX_SEATS} persone`); continue; }
     const seats = [];
@@ -50,7 +54,7 @@ export function parseGroupsText(text, students) {
       if (r.error) errors.push(`Gruppo ${number}, sostituto ${r.error}`);
       else subId = r.student.id;
     }
-    out.push({ number, seats, subId });
+    out.push({ number, seats, subId, date });
   }
   const nums = out.map((g) => g.number);
   if (new Set(nums).size !== nums.length) errors.push('Ci sono due righe con lo stesso numero di gruppo');
@@ -58,7 +62,7 @@ export function parseGroupsText(text, students) {
 }
 
 // Costruisce i documenti Firestore, mantenendo le date dei gruppi già esistenti.
-export function buildImport(parsed, existing, pid = '') {
+export function buildImport(parsed, existing, pid = '', opts = {}) {
   const byNumber = new Map(existing.map((g) => [g.number, g]));
   const changed = {};
   for (const g of parsed) {
@@ -67,9 +71,10 @@ export function buildImport(parsed, existing, pid = '') {
       pid,
       seats: g.seats,
       status: g.seats.map(() => WAIT),
-      subId: g.subId,
-      date: old?.date ?? null,
-      startsAt: old?.startsAt ?? null,
+      subId: opts.noSub ? '' : g.subId,
+      noSub: Boolean(opts.noSub),
+      date: g.date || old?.date || null,
+      startsAt: g.date ? startsAtOf(g.date) : old?.startsAt ?? null,
     }));
   }
   const keep = new Set(parsed.map((g) => g.number));

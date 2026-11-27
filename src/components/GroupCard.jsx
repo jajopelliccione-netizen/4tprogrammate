@@ -43,7 +43,7 @@ export default function GroupCard({ group, groups, studentsById, today, mySid, o
         })}
       </ul>
       <footer>
-        <span>Sostituto: <b>{sub ? studentsById[sub]?.name : '—'}</b></span>
+        {group.noSub ? <span>Nessun sostituto</span> : <span>Sostituto: <b>{sub ? studentsById[sub]?.name : '—'}</b></span>}
         {footerExtra}
       </footer>
     </section>

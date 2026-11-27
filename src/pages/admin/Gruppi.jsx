@@ -5,7 +5,7 @@ import {
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/Toast';
 import {
-  addGroup, commitChange, deleteGroup, deleteProgrammata, renameProgrammata, setGroupDate, setGroupDates, setGroupSub,
+  addGroup, commitChange, deleteGroup, deleteProgrammata, renameProgrammata, setGroupDate, setGroupDates, setGroupSub, setNoSub,
 } from '../../lib/admin';
 import { buildImport, parseGroupsText } from '../../lib/importGroups';
 import { colorOf } from '../../components/GroupCard';
@@ -114,7 +114,7 @@ export default function Gruppi() {
   const auto = () => {
     const base = students.filter((s) => !s.excluded).map((s) => s.id);
     const ids = shuffle ? shuffled(base) : base;
-    const res = distribute(ids, Number(nGroups), groups, currentPid);
+    const res = distribute(ids, Number(nGroups), groups, currentPid, { noSub: currentProg.noSub });
     if (!confirm(`Ridistribuire ${ids.length} studenti in ${nGroups} gruppi di "${currentProg.subject}"? I gruppi attuali di questa materia (posti e stati) vengono sostituiti; le date restano. Potrai annullare.`)) return;
     run(async () => {
       await commit({ changed: res.groups, deleted: res.deleted, entry: { type: 'distribuzione', n: Number(nGroups) } });
@@ -127,7 +127,7 @@ export default function Gruppi() {
     if (errors.length) { toast(errors.slice(0, 3).join(' · '), { error: true }); return; }
     if (!parsed.length) { toast('Nessun gruppo trovato.', { error: true }); return; }
     if (!confirm(`Importare ${parsed.length} gruppi in "${currentProg.subject}"? Sostituiscono quelli attuali di questa materia (le date restano). Potrai annullare.`)) return;
-    const { changed, deleted } = buildImport(parsed, groups, currentPid);
+    const { changed, deleted } = buildImport(parsed, groups, currentPid, { noSub: currentProg.noSub });
     run(async () => {
       await commit({ changed, deleted, entry: { type: 'importa', n: parsed.length } });
       toast('Gruppi importati ✔');
@@ -163,7 +163,7 @@ export default function Gruppi() {
 
       <div className="boardhead">
         <h2 style={{ margin: 0 }}>{currentProg.subject}</h2>
-        <button className="small" disabled={busy} onClick={() => run(async () => { await addGroup(groups, currentPid); })}>+ Gruppo</button>
+        <button className="small" disabled={busy} onClick={() => run(async () => { await addGroup(groups, currentPid, { noSub: currentProg.noSub }); })}>+ Gruppo</button>
       </div>
       <p className="hint">Trascina i nomi (o tocca un nome e poi un posto). Se il posto è occupato, i due si scambiano.</p>
 
@@ -202,12 +202,12 @@ export default function Gruppi() {
                 ))}
               </ul>
               <footer>
-                <label className="sublabel">Sostituto
+                {!g.noSub && <label className="sublabel">Sostituto
                   <select value={g.subId || ''} onChange={(e) => run(() => setGroupSub(g.id, e.target.value))}>
                     <option value="">Auto ({sub ? nameOf(sub) : '—'})</option>
                     {subCandidates(g).map((sid) => <option key={sid} value={sid}>{nameOf(sid)}</option>)}
                   </select>
-                </label>
+                </label>}
                 {g.seats.length < MAX_SEATS && (
                   <button className="small addseat" title="Aggiungi una persona al gruppo" disabled={busy} onClick={() => changeSeats(g, true)}>+ Persona</button>
                 )}
@@ -265,7 +265,10 @@ export default function Gruppi() {
       </details>
 
       <details className="sec">
-        <summary><span><Icon n="settings" /> Programmata: nome ed eliminazione</span></summary>
+        <summary><span><Icon n="settings" /> Programmata: nome, sostituti, eliminazione</span></summary>
+        <label className="inline"><input type="checkbox" checked={Boolean(currentProg.noSub)} disabled={busy}
+          onChange={(e) => run(async () => { await setNoSub(currentPid, groups, e.target.checked); toast(e.target.checked ? 'Questa programmata non ha sostituti.' : 'Sostituti attivi.'); })} />
+          Questa programmata non ha sostituti</label>
         {!currentProg.virtual && (
           <>
             <label>Materia
