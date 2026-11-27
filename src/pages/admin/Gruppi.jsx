@@ -124,7 +124,7 @@ export default function Gruppi() {
 
   const doImport = () => {
     const { groups: parsed, errors } = parseGroupsText(importText, students);
-    if (errors.length) { toast(errors.slice(0, 3).join(' · '), { error: true }); return; }
+    if (errors.length) { toast(errors.slice(0, 4).join(' · '), { error: true }); return; }
     if (!parsed.length) { toast('Nessun gruppo trovato.', { error: true }); return; }
     if (!confirm(`Importare ${parsed.length} gruppi in "${currentProg.subject}"? Sostituiscono quelli attuali di questa materia (le date restano). Potrai annullare.`)) return;
     const { changed, deleted } = buildImport(parsed, groups, currentPid, { noSub: currentProg.noSub });
@@ -247,6 +247,7 @@ export default function Gruppi() {
         <summary><span><Icon n="inbox" /> Importa gruppi da testo</span></summary>
         <p className="hint">Una riga per gruppo, cognomi separati da virgola, sostituto dopo "|":<br />
           <code>Gruppo 1: Tasmi, Sciumè, Perricone, Maino | Sostituto: Guzzardi</code><br />
+          La data è facoltativa, tra parentesi quadre: <code>Gruppo 1 [4/12/2026]: Papagno, Tarallo</code><br />
           Si possono scrivere fino a 5 nomi per gruppo.</p>
         <textarea rows={7} value={importText} onChange={(e) => setImportText(e.target.value)} />
         <button className="primary" disabled={busy || !importText.trim()} onClick={doImport}>Importa i gruppi</button>

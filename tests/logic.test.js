@@ -257,3 +257,15 @@ test('import con date e programmata senza sostituti', () => {
   assert.equal(changed.pA_g01.noSub, true);
   assert.equal(changed.pA_g02.date, null);
 });
+
+import { parseDateLoose } from '../src/lib/importGroups.js';
+test('date nell\'import: formati diversi, non valide rifiutate', () => {
+  assert.equal(parseDateLoose('2026-12-04'), '2026-12-04');
+  assert.equal(parseDateLoose('2027-1-8'), '2027-01-08');
+  assert.equal(parseDateLoose('4/12/2026'), '2026-12-04');
+  assert.equal(parseDateLoose('31-02-2027'), null);
+  assert.equal(parseDateLoose('boh'), null);
+  const r = parseGroupsText('Gruppo 4 [2027-1-8]: Torres', [{ id: 's1', name: 'Torres Athena' }]);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.groups[0].date, '2027-01-08');
+});

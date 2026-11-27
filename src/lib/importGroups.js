@@ -7,6 +7,18 @@
 import { MAX_SEATS, SEATS, WAIT, emptyGroup, finalize, groupId } from './groups.js';
 import { startsAtOf } from './dates.js';
 
+// Data tra parentesi quadre, in vari formati: 2026-12-04, 2027-1-8, 4/12/2026, 4-12-2026 → "AAAA-MM-GG"
+export function parseDateLoose(txt) {
+  const t = txt.trim();
+  let y, m, d, r;
+  if ((r = t.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) [y, m, d] = [r[1], r[2], r[3]];
+  else if ((r = t.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/))) [d, m, y] = [r[1], r[2], r[3]];
+  else return null;
+  const dt = new Date(Number(y), Number(m) - 1, Number(d));
+  if (dt.getFullYear() !== Number(y) || dt.getMonth() !== Number(m) - 1 || dt.getDate() !== Number(d)) return null;
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[’'`]/g, '').trim();
 const tokens = (s) => norm(s).split(/\s+/).filter(Boolean);
 
@@ -28,10 +40,14 @@ export function parseGroupsText(text, students) {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
-    const m = line.match(/^gruppo\s*(\d+)\s*(?:\[(\d{4}-\d{2}-\d{2})\])?\s*[:\-]\s*(.*)$/i);
+    const m = line.match(/^gruppo\s*(\d+)\s*(?:\[([^\]]*)\])?\s*[:\-]\s*(.*)$/i);
     if (!m) { errors.push(`Riga non riconosciuta: "${line}"`); continue; }
     const number = Number(m[1]);
-    const date = m[2] || null;
+    let date = null;
+    if (m[2] !== undefined && m[2].trim()) {
+      date = parseDateLoose(m[2]);
+      if (!date) { errors.push(`Gruppo ${m[1]}: data non valida "${m[2]}" (scrivila come 2026-12-04 oppure 4/12/2026)`); continue; }
+    }
     const [namesPart, subPart] = m[3].split('|');
     const names = namesPart.split(/[,;]/).map((x) => x.trim()).filter(Boolean);
     if (names.length > MAX_SEATS) { errors.push(`Gruppo ${number}: massimo ${MAX_SEATS} persone`); continue; }
